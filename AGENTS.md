@@ -1,20 +1,16 @@
-# Forge Monorepo
+# Forge Docs Monorepo
 
-Open-source schema-first OpenAPI code generation and surface tooling framework.
+API documentation site for Forge OpenAPI specs, built on Astro.
 
 ## Architecture
 
-- **`packages/forge`**: Core engine — OpenAPI 3.x resolver, typed schema model, JSONPath overlays, and plugin lifecycle.
 - **`packages/astro-fern`**: Generic Astro engine for rendering Fern-based API documentation.
-- **`packages/docs-site`**: API documentation website consuming `astro-fern`.
-- **`packages/cloudflare-fern-config`**: Fern generator configuration (`generators.yml`, `fern.config.json`).
-- **`packages/cloudflare-forge-sdk-ts`**: TypeScript SDK package wrapper and `sdk-map` generator.
-- **`packages/cloudflare-forge-transformer-sdk-ts`**: Standalone TypeScript SDK transformer bundle.
-- **`packages/cloudflare-forge-sdk-{lang}`**: Language-specific SDK workspace wrappers (Python, Go, Java, PHP, C#, Ruby, Rust, Swift).
+- **`packages/fern-forge`**: `astro-fern` extension that validates and adapts Forge OpenAPI metadata.
+- **`packages/docs-site`**: API documentation website consuming `astro-fern` and `fern-forge`. The OpenAPI spec is fetched from the `openapi.forge.json` GitHub release asset (or a local file via `FORGE_OPENAPI_SPEC`).
 
 ## Conventions
 
-- **Open Source Separation**: Generic packages (`forge`, `astro-fern`) must remain free of Cloudflare-specific dependencies. All Cloudflare-specific SDK wrappers and configurations must be prefixed with `cloudflare-*`.
+- **Open Source Separation**: Generic packages (`astro-fern`, `fern-forge`) must remain free of Cloudflare-specific dependencies.
 - **Formatting & Linting**: `oxfmt` and `oxlint` via `pnpm check`.
 - **Type Checking**: Strict TypeScript compiler settings across all packages via `pnpm typecheck`.
 - **Tests**: Node-native test runner via `pnpm test` (or `pnpm -r run test`).
@@ -33,4 +29,7 @@ pnpm typecheck
 
 # Run all unit tests
 pnpm test
+
+# Build the docs site
+pnpm --filter docs-site build
 ```
