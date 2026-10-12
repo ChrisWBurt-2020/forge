@@ -41,9 +41,7 @@ async function fixtureArtifact(titleSuffix = ''): Promise<{
   const artifact = contentOperationArtifactSchema.parse(
     await enrichOperationArtifact(source, async (markdown) => ({ markdown, html: `<p>${markdown}</p>` })),
   );
-  if (titleSuffix) {
-    artifact.operation.title += titleSuffix;
-  }
+  if (titleSuffix) artifact.operation.title += titleSuffix;
   return { artifact, catalog: content.catalog };
 }
 

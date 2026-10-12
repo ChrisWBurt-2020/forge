@@ -113,13 +113,9 @@ export function defaultFormatIdentifier(identifier: string): string {
 
 /** Accept Fern arrays and Forge's pre-transform dotted-string group convention. */
 function toSdkGroupPath(groupName: unknown, operationId: string): string[] {
-  if (groupName === undefined) {
-    return [];
-  }
+  if (groupName === undefined) return [];
   const parsed = sdkGroupPathSchema.safeParse(groupName);
-  if (parsed.success) {
-    return parsed.data;
-  }
+  if (parsed.success) return parsed.data;
   throw new Error(`astro-fern: operation "${operationId}" has an invalid x-fern-sdk-group-name`);
 }
 
@@ -139,9 +135,7 @@ function mergePresentation(
   const result: FernOperationPresentation = {};
   const owners: Partial<Record<keyof FernOperationPresentation, string>> = {};
   for (const { extension, value } of values) {
-    if (!value) {
-      continue;
-    }
+    if (!value) continue;
     if (value.requireConfirmation !== undefined) {
       if (result.requireConfirmation !== undefined && result.requireConfirmation !== value.requireConfirmation) {
         throw new Error(
@@ -183,9 +177,7 @@ function operationSdkMetadata(
   });
   const extensions: Record<string, JsonValueSchema> = {};
   for (const { name, schema, contribution } of contributions) {
-    if (contribution?.data === undefined) {
-      continue;
-    }
+    if (contribution?.data === undefined) continue;
     extensions[name] = jsonValueSchema.parse(schema.parse(contribution.data));
   }
   const primary: OperationSdkMetadata = {
@@ -243,9 +235,7 @@ function metadataForProduct(variants: OperationSdkMetadata[], product: FernProdu
     return variants.filter((candidate) => toSdkGroupPath(candidate.groupName, '<unknown>')[0] === product.sdkGroup);
   }
   const primary = variants[0];
-  if (!primary) {
-    throw new Error('astro-fern: operation has no primary projection');
-  }
+  if (!primary) throw new Error('astro-fern: operation has no primary projection');
   return [primary];
 }
 
@@ -255,9 +245,7 @@ export function routeSegment(value: string, owner = 'operationId'): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  if (!slug) {
-    throw new Error(`astro-fern: ${owner} "${value}" cannot form a documentation URL`);
-  }
+  if (!slug) throw new Error(`astro-fern: ${owner} "${value}" cannot form a documentation URL`);
   return slug;
 }
 
@@ -303,9 +291,7 @@ function productOwnsOperation(
       (metadata) => toSdkGroupPath(metadata.groupName, operation.operationId ?? '<unknown>')[0] === product.sdkGroup,
     );
   }
-  if (!product.pathPrefixes) {
-    return true;
-  }
+  if (!product.pathPrefixes) return true;
   return product.pathPrefixes.some(
     (prefix) => prefix === '/' || pathTemplate === prefix || pathTemplate.startsWith(`${prefix}/`),
   );
@@ -336,31 +322,23 @@ export function discoverFernProductsWithPrepared(
   const products = new Map<string, Map<string, FernSectionConfig>>();
 
   for (const [path, pathItem] of Object.entries(source.paths ?? {})) {
-    if (!pathItem) {
-      continue;
-    }
+    if (!pathItem) continue;
     for (const method of HTTP_METHODS) {
       const operation = pathItem[method];
-      if (!operation?.operationId || operation['x-fern-ignore'] === true) {
-        continue;
-      }
+      if (!operation?.operationId || operation['x-fern-ignore'] === true) continue;
       const operationId = operation.operationId;
       const tags = operation.tags ?? [];
       const tag = tags[0];
       const metadata = operationSdkMetadata({ document: source, path, method, operation }, preparedExtensions);
       const projected = metadata.filter((variant) => toSdkGroupPath(variant.groupName, operationId).length > 0);
-      if (projected.length === 0) {
-        continue;
-      }
+      if (projected.length === 0) continue;
       if (!tag) {
         throw new Error(`astro-fern: operation "${operationId}" has Fern SDK metadata but no OpenAPI tag`);
       }
 
       for (const variant of projected) {
         const productId = toSdkGroupPath(variant.groupName, operationId)[0];
-        if (!productId) {
-          continue;
-        }
+        if (!productId) continue;
         let sections = products.get(productId);
         if (!sections) {
           sections = new Map();
@@ -389,27 +367,13 @@ export function discoverFernProductsWithPrepared(
 
 function toSnippetParam(node: SchemaNode): SnippetParam {
   const sp: SnippetParam = { name: node.name ?? '', required: node.required, type: node.type };
-  if (node.sdkName) {
-    sp.sdkName = node.sdkName;
-  }
-  if (node.enumValues) {
-    sp.enumValues = node.enumValues;
-  }
-  if (node.default !== undefined) {
-    sp.default = node.default;
-  }
-  if (node.children) {
-    sp.children = node.children.map(toSnippetParam);
-  }
-  if (node.items) {
-    sp.items = toSnippetParam(node.items);
-  }
-  if (node.variants) {
-    sp.variants = node.variants.map(toSnippetParam);
-  }
-  if (node.apiFieldPath) {
-    sp.apiFieldPath = node.apiFieldPath;
-  }
+  if (node.sdkName) sp.sdkName = node.sdkName;
+  if (node.enumValues) sp.enumValues = node.enumValues;
+  if (node.default !== undefined) sp.default = node.default;
+  if (node.children) sp.children = node.children.map(toSnippetParam);
+  if (node.items) sp.items = toSnippetParam(node.items);
+  if (node.variants) sp.variants = node.variants.map(toSnippetParam);
+  if (node.apiFieldPath) sp.apiFieldPath = node.apiFieldPath;
   return sp;
 }
 function toSnippetOp(op: DocOperation): SnippetOperation {
@@ -536,33 +500,23 @@ export function buildDocsModelResult(
   }
 
   for (const [pathTemplate, pathItem] of Object.entries(doc.paths ?? {})) {
-    if (!pathItem) {
-      continue;
-    }
+    if (!pathItem) continue;
     for (const method of HTTP_METHODS) {
       const op = pathItem[method];
-      if (!op?.operationId) {
-        continue;
-      }
-      if (op['x-fern-ignore'] === true) {
-        continue;
-      }
+      if (!op?.operationId) continue;
+      if (op['x-fern-ignore'] === true) continue;
       const variants = operationSdkMetadata(
         { document: doc, path: pathTemplate, method, operation: op },
         activeExtensions,
       );
 
       const pathOwners = productConfigs.filter((product) => productOwnsOperation(product, pathTemplate, op, variants));
-      if (pathOwners.length === 0) {
-        continue;
-      }
+      if (pathOwners.length === 0) continue;
       const tags = new Set(op.tags ?? []);
       const owners = pathOwners.flatMap((product) =>
         product.sections.filter((section) => tags.has(section.tag)).map((section) => ({ product, section })),
       );
-      if (owners.length === 0) {
-        continue;
-      }
+      if (owners.length === 0) continue;
       const uniqueOwners = new Map(owners.map((owner) => [`${owner.product.id}\0${owner.section.id}`, owner]));
       const ownerValues = [...uniqueOwners.values()];
       const ownersByProduct = Map.groupBy(ownerValues, (owner) => owner.product.id);
@@ -634,9 +588,7 @@ export function buildDocsModelResult(
               parent = key;
             }
           } else {
-            if (routeSlugs.has(routeKey)) {
-              throw new Error(`astro-fern: duplicate documentation route "${routeKey}"`);
-            }
+            if (routeSlugs.has(routeKey)) throw new Error(`astro-fern: duplicate documentation route "${routeKey}"`);
             routeSlugs.add(routeKey);
           }
 
@@ -659,9 +611,7 @@ export function buildDocsModelResult(
             responses: resolved.responses,
             snippets: [],
           };
-          if (availability) {
-            docOp.availability = availability;
-          }
+          if (availability) docOp.availability = availability;
           if (metadata.presentation.requireConfirmation) {
             docOp.requireConfirmation = metadata.presentation.requireConfirmation;
           }
@@ -712,9 +662,7 @@ export function buildDocsModelResult(
   for (const [route, candidates] of pendingPlacements) {
     if (candidates.length === 1) {
       const candidate = candidates[0];
-      if (candidate) {
-        candidate.section.operations.push(candidate.operation);
-      }
+      if (candidate) candidate.section.operations.push(candidate.operation);
       continue;
     }
     const priority = Math.max(...candidates.map((candidate) => candidate.priority));
@@ -764,9 +712,7 @@ export function buildDocsModelResult(
     .filter((product) => product.sections.length > 0);
   for (const product of products) {
     const config = productConfigs.find((candidate) => candidate.id === product.name);
-    if (!config) {
-      throw new Error(`astro-fern: missing configuration for product "${product.name}"`);
-    }
+    if (!config) throw new Error(`astro-fern: missing configuration for product "${product.name}"`);
     const order = new Map(config.sections.map((section, index) => [section.id, index]));
     const sectionOrder = (sectionId: string): number => {
       const index = order.get(sectionId);

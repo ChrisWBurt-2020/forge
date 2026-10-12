@@ -666,9 +666,7 @@ test('catalog product index uses its default snapshot and prefers operation Mark
       if (request.kind === 'operation') {
         return `/operation?snapshot=${request.snapshotId}&representation=${request.representation}`;
       }
-      if (request.scope === 'target') {
-        return `/target-index?target=${request.targetId}`;
-      }
+      if (request.scope === 'target') return `/target-index?target=${request.targetId}`;
       return undefined;
     },
   ).body;
@@ -737,12 +735,8 @@ test('catalog target index scopes operation links to that target and falls back 
     },
     (request) => {
       calls.push(request);
-      if (request.kind !== 'operation') {
-        return undefined;
-      }
-      if (request.representation === 'markdown') {
-        return undefined;
-      }
+      if (request.kind !== 'operation') return undefined;
+      if (request.representation === 'markdown') return undefined;
       return `/operation?representation=human&target=${request.targetId}`;
     },
   ).body;
@@ -803,9 +797,7 @@ test('catalog llms requests reject inexact or unknown identities', () => {
   );
 
   const withoutDefault = structuredClone(catalog);
-  for (const snapshot of withoutDefault.products[0]?.snapshots ?? []) {
-    snapshot.default = false;
-  }
+  for (const snapshot of withoutDefault.products[0]?.snapshots ?? []) snapshot.default = false;
   assert.throws(
     () =>
       renderLlmsIndexFromCatalog(withoutDefault, { kind: 'llms', scope: 'product', productId: 'widgets' }, unresolved),

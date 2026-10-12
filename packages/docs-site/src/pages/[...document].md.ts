@@ -4,9 +4,7 @@ import { getApiOperation, getApiRouter } from '../api-server.ts';
 
 export const GET: APIRoute = async ({ locals, request, url }) => {
   const resolved = await getApiOperation(url, request, locals, 'markdown');
-  if (!resolved) {
-    return new Response('Not found', { status: 404 });
-  }
+  if (!resolved) return new Response('Not found', { status: 404 });
   const router = await getApiRouter();
   const document = renderPageMarkdown(resolved.page, {
     ...(resolved.lang ? { target: resolved.lang } : {}),

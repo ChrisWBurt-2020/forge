@@ -13,7 +13,7 @@ const [resolved, router, commandRouter] = await Promise.all([
   getCommandRouter(),
 ]);
 const command = resolved ? undefined : commandRouter.resolve(Astro.url, router.plan.catalog.products);
-if (!resolved && !command) {return new Response('Not found', { status: 404 });}
+if (!resolved && !command) return new Response('Not found', { status: 404 });
 const target = resolved?.lang;
 const page = resolved?.kind === 'operation' ? resolved.page : undefined;
 
@@ -53,7 +53,7 @@ if (command) {
   title = commandTitle(command);
   metaDescription = command.description;
 } else {
-  if (!resolved) {throw new Error('Expected an API page or tooling command');}
+  if (!resolved) throw new Error('Expected an API page or tooling command');
   title =
     resolved.kind === 'product'
       ? resolved.product.title
@@ -62,10 +62,10 @@ if (command) {
         : resolved.kind === 'resource'
           ? resolved.resource.title
           : resolved.operation.title;
-  if (resolved.kind === 'operation') {metaDescription = toPlainText(resolved.page.operation.description.html);}
-  else if (resolved.kind === 'product') {metaDescription = resolved.product.description;}
-  else if (resolved.kind === 'resource') {metaDescription = `${resolved.resource.title} API resources and methods.`;}
-  else {metaDescription = `${resolved.section.title} API operations.`;}
+  if (resolved.kind === 'operation') metaDescription = toPlainText(resolved.page.operation.description.html);
+  else if (resolved.kind === 'product') metaDescription = resolved.product.description;
+  else if (resolved.kind === 'resource') metaDescription = `${resolved.resource.title} API resources and methods.`;
+  else metaDescription = `${resolved.section.title} API operations.`;
 }
 
 const frontmatter = {

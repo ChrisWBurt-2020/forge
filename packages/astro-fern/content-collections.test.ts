@@ -57,9 +57,7 @@ function fakeContext(parse?: (id: string, data: unknown) => void | Promise<void>
     },
     set: (entry) => {
       const result = apiReferenceEntrySchema.safeParse(entry.data);
-      if (!result.success) {
-        throw result.error;
-      }
+      if (!result.success) throw result.error;
       entries.set(entry.id, result.data);
       return true;
     },

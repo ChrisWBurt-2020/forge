@@ -75,13 +75,9 @@ const ACRONYMS = new Set([
 
 function humanizeWord(word: string): string {
   const lower = word.toLowerCase();
-  if (ACRONYMS.has(lower)) {
-    return lower.toUpperCase();
-  }
+  if (ACRONYMS.has(lower)) return lower.toUpperCase();
   // Pluralized acronyms: acls -> ACLs, tsigs -> TSIGs.
-  if (lower.endsWith('s') && ACRONYMS.has(lower.slice(0, -1))) {
-    return `${lower.slice(0, -1).toUpperCase()}s`;
-  }
+  if (lower.endsWith('s') && ACRONYMS.has(lower.slice(0, -1))) return `${lower.slice(0, -1).toUpperCase()}s`;
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
@@ -136,18 +132,10 @@ function toLowerCamel(value: string): string {
 }
 
 function pyLiteral(value: unknown): string {
-  if (value === null) {
-    return 'None';
-  }
-  if (typeof value === 'boolean') {
-    return value ? 'True' : 'False';
-  }
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(pyLiteral).join(', ')}]`;
-  }
+  if (value === null) return 'None';
+  if (typeof value === 'boolean') return value ? 'True' : 'False';
+  if (typeof value === 'number') return String(value);
+  if (Array.isArray(value)) return `[${value.map(pyLiteral).join(', ')}]`;
   if (typeof value === 'object') {
     return `{${Object.entries(value)
       .map(([key, entry]) => `${JSON.stringify(key)}: ${pyLiteral(entry)}`)
@@ -157,18 +145,10 @@ function pyLiteral(value: unknown): string {
 }
 
 function rbLiteral(value: unknown): string {
-  if (value === null) {
-    return 'nil';
-  }
-  if (typeof value === 'boolean') {
-    return value ? 'true' : 'false';
-  }
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(rbLiteral).join(', ')}]`;
-  }
+  if (value === null) return 'nil';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return String(value);
+  if (Array.isArray(value)) return `[${value.map(rbLiteral).join(', ')}]`;
   if (typeof value === 'object') {
     return `{${Object.entries(value)
       .map(([key, entry]) => `${JSON.stringify(key)} => ${rbLiteral(entry)}`)
@@ -204,9 +184,7 @@ interface SdkBodyField {
 
 function sdkPlaceholderValue(param: SnippetParam): unknown {
   const variant = param.variants?.[0];
-  if (variant) {
-    return sdkPlaceholderValue(variant);
-  }
+  if (variant) return sdkPlaceholderValue(variant);
   if (param.children) {
     return Object.fromEntries(
       param.children
@@ -214,27 +192,19 @@ function sdkPlaceholderValue(param: SnippetParam): unknown {
         .map((child) => [child.sdkName ?? child.name, sdkPlaceholderValue(child)]),
     );
   }
-  if (param.items) {
-    return [sdkPlaceholderValue(param.items)];
-  }
+  if (param.items) return [sdkPlaceholderValue(param.items)];
   return placeholderValue(param);
 }
 
 /** `undefined` means no body; `null` means the SDK sample cannot express it. */
 function sdkBodyFields(op: SnippetOperation): SdkBodyField[] | null | undefined {
-  if (!op.requestBody) {
-    return undefined;
-  }
+  if (!op.requestBody) return undefined;
   const representations = op.requestBody.representations.filter((representation) =>
     isJsonMediaType(representation.mediaType),
   );
   const representation = representations.find((candidate) => candidate.schema);
-  if (!representation?.schema) {
-    return null;
-  }
-  if (!representation.schema.children) {
-    return null;
-  }
+  if (!representation?.schema) return null;
+  if (!representation.schema.children) return null;
   return representation.schema.children
     .filter((param) => param.required)
     .map((param) => ({ name: param.sdkName ?? param.name, value: sdkPlaceholderValue(param) }));
@@ -246,22 +216,16 @@ const renderCurl: SnippetRenderer = ({ op }) => {
   const head = verb === 'GET' ? `curl ${url}` : `curl -X ${verb} ${url}`;
   const args = [head, '-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"'];
   for (const param of op.queryParams) {
-    if (param.required) {
-      args.push(`--url-query "${param.name}=$${toEnvVar(param.name)}"`);
-    }
+    if (param.required) args.push(`--url-query "${param.name}=$${toEnvVar(param.name)}"`);
   }
   if (op.requestBody) {
     const representation = httpRequestRepresentation(op);
-    if (!representation || isMultipartMediaType(representation.mediaType)) {
-      return null;
-    }
+    if (!representation || isMultipartMediaType(representation.mediaType)) return null;
     args.push(`-H ${shellSingleQuote(`Content-Type: ${representation.mediaType}`)}`);
     if (isJsonMediaType(representation.mediaType)) {
       if (representation.schema) {
         args.push(`-d ${shellSingleQuote(JSON.stringify(placeholderValue(representation.schema)))}`);
-      } else {
-        args.push('--data-binary @request-body.json');
-      }
+      } else args.push('--data-binary @request-body.json');
     } else {
       args.push('--data-binary @request-body');
     }
@@ -270,36 +234,24 @@ const renderCurl: SnippetRenderer = ({ op }) => {
 };
 
 const renderCf: SnippetRenderer = ({ accessorPath, methodName, op }) => {
-  if (op.requestBody || op.queryParams.some((param) => param.required)) {
-    return null;
-  }
+  if (op.requestBody || op.queryParams.some((param) => param.required)) return null;
   const positionals = op.pathParams.map((param) => `<${param.name}>`).join(' ');
   return ['cf', ...accessorPath, methodName, positionals].filter(Boolean).join(' ');
 };
 
 const renderTypeScript: SnippetRenderer = ({ op, accessorPath, methodName }) => {
   const bodyFields = sdkBodyFields(op);
-  if (bodyFields === null) {
-    return null;
-  }
+  if (bodyFields === null) return null;
   const accessor = ['client', ...accessorPath.map(toLowerCamel), toLowerCamel(methodName)].join('.');
   const argFields: string[] = [];
-  for (const param of op.pathParams) {
-    argFields.push(`  ${param.name}: ${JSON.stringify(`<${param.name}>`)},`);
-  }
+  for (const param of op.pathParams) argFields.push(`  ${param.name}: ${JSON.stringify(`<${param.name}>`)},`);
   for (const param of op.queryParams) {
-    if (!param.required) {
-      continue;
-    }
-    if (argFields.some((field) => field.trimStart().startsWith(`${param.name}:`))) {
-      continue;
-    }
+    if (!param.required) continue;
+    if (argFields.some((field) => field.trimStart().startsWith(`${param.name}:`))) continue;
     argFields.push(`  ${param.name}: ${JSON.stringify(placeholderValue(param))},`);
   }
   for (const { name, value } of bodyFields ?? []) {
-    if (argFields.some((field) => field.trimStart().startsWith(`${name}:`))) {
-      continue;
-    }
+    if (argFields.some((field) => field.trimStart().startsWith(`${name}:`))) continue;
     argFields.push(`  ${name}: ${JSON.stringify(value)},`);
   }
   const args = argFields.length > 0 ? `{\n${argFields.join('\n')}\n}` : '';
@@ -316,29 +268,19 @@ const renderTypeScript: SnippetRenderer = ({ op, accessorPath, methodName }) => 
 // Fern uses to generate it, so a snake_cased accessor + keyword args is faithful.
 const renderPython: SnippetRenderer = ({ op, accessorPath, methodName }) => {
   const bodyFields = sdkBodyFields(op);
-  if (bodyFields === null) {
-    return null;
-  }
+  if (bodyFields === null) return null;
   const accessor = ['client', ...accessorPath.map(toSnake), toSnake(methodName)].join('.');
   const args: string[] = [];
-  for (const param of op.pathParams) {
-    args.push(`    ${toSnake(param.name)}=${JSON.stringify(`<${param.name}>`)},`);
-  }
+  for (const param of op.pathParams) args.push(`    ${toSnake(param.name)}=${JSON.stringify(`<${param.name}>`)},`);
   for (const param of op.queryParams) {
-    if (!param.required) {
-      continue;
-    }
+    if (!param.required) continue;
     const name = toSnake(param.name);
-    if (args.some((arg) => arg.trimStart().startsWith(`${name}=`))) {
-      continue;
-    }
+    if (args.some((arg) => arg.trimStart().startsWith(`${name}=`))) continue;
     args.push(`    ${name}=${pyLiteral(placeholderValue(param))},`);
   }
   for (const { name, value } of bodyFields ?? []) {
     const top = toSnake(name);
-    if (args.some((arg) => arg.trimStart().startsWith(`${top}=`))) {
-      continue;
-    }
+    if (args.some((arg) => arg.trimStart().startsWith(`${top}=`))) continue;
     args.push(`    ${top}=${pyLiteral(value)},`);
   }
   const body = args.length > 0 ? `\n${args.join('\n')}\n` : '';
@@ -355,29 +297,19 @@ const renderPython: SnippetRenderer = ({ op, accessorPath, methodName }) => {
 // Same faithful pattern as Python: snake_cased accessor + keyword (hash) args.
 const renderRuby: SnippetRenderer = ({ op, accessorPath, methodName }) => {
   const bodyFields = sdkBodyFields(op);
-  if (bodyFields === null) {
-    return null;
-  }
+  if (bodyFields === null) return null;
   const accessor = ['client', ...accessorPath.map(toSnake), toSnake(methodName)].join('.');
   const args: string[] = [];
-  for (const param of op.pathParams) {
-    args.push(`  ${toSnake(param.name)}: ${JSON.stringify(`<${param.name}>`)},`);
-  }
+  for (const param of op.pathParams) args.push(`  ${toSnake(param.name)}: ${JSON.stringify(`<${param.name}>`)},`);
   for (const param of op.queryParams) {
-    if (!param.required) {
-      continue;
-    }
+    if (!param.required) continue;
     const name = toSnake(param.name);
-    if (args.some((arg) => arg.trimStart().startsWith(`${name}:`))) {
-      continue;
-    }
+    if (args.some((arg) => arg.trimStart().startsWith(`${name}:`))) continue;
     args.push(`  ${name}: ${rbLiteral(placeholderValue(param))},`);
   }
   for (const { name, value } of bodyFields ?? []) {
     const top = toSnake(name);
-    if (args.some((arg) => arg.trimStart().startsWith(`${top}:`))) {
-      continue;
-    }
+    if (args.some((arg) => arg.trimStart().startsWith(`${top}:`))) continue;
     args.push(`  ${top}: ${rbLiteral(value)},`);
   }
   const body = args.length > 0 ? `\n${args.join('\n')}\n` : '';

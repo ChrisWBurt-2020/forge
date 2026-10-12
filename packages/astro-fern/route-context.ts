@@ -89,23 +89,17 @@ export function buildSnapshotSwitch(
 ): FernRouteContext {
   const normalized = normalizePath(pathname);
   const route = data.humanRoutes.find((candidate) => normalizePath(candidate.pathname) === normalized);
-  if (!route) {
-    return EMPTY;
-  }
+  if (!route) return EMPTY;
 
   for (const product of data.catalog.products) {
     for (const snapshot of product.snapshots) {
       const currentPage = snapshot.pages.find((page) => page.id === route.pageId);
-      if (!currentPage) {
-        continue;
-      }
+      if (!currentPage) continue;
       const { entryId, operationId } = currentPage;
       const snapshots = product.snapshots
         .map((candidate): SnapshotSwitchOption | undefined => {
           const canonical = candidate.pages.find((page) => page.entryId === entryId);
-          if (!canonical) {
-            return undefined;
-          }
+          if (!canonical) return undefined;
           // Preserve the execution target across the switch when the matched
           // route is a per-target variant (path target routing).
           const href = route.target

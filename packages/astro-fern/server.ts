@@ -57,9 +57,7 @@ let cachedProject: FernProjectRuntime | undefined;
 
 async function readProjectCache(): Promise<FernProjectRuntime> {
   const project = await readContentProject();
-  if (cachedProject?.revision === project.revision) {
-    return cachedProject;
-  }
+  if (cachedProject?.revision === project.revision) return cachedProject;
   cachedProject = createFernProjectRuntime(project, runtime, deployment);
   return cachedProject;
 }
@@ -86,9 +84,7 @@ function readOperation(
       base,
       ...(options.fetcher ? { fetcher: options.fetcher } : {}),
     });
-    if ('error' in result) {
-      throw result.error;
-    }
+    if ('error' in result) throw result.error;
     if (!result.entry) {
       throw new Error(
         `astro-fern: the live loader returned no entry for operation "${entryId}" in snapshot "${snapshotId}"; verify that the published digest is reachable through the configured origin or fetcher`,
@@ -161,12 +157,8 @@ export async function getFernPageForPath(
 ): Promise<{ page: FernPageSchema; target?: string } | undefined> {
   const project = await readProjectCache();
   const route = project.humanRoutes.get(normalizeFernPath(pathname));
-  if (!route) {
-    return undefined;
-  }
-  if (!project.pageReferences.has(route.pageId)) {
-    return undefined;
-  }
+  if (!route) return undefined;
+  if (!project.pageReferences.has(route.pageId)) return undefined;
   const page = await readPage(project, route.pageId, options);
   return { page, ...(route.target ? { target: route.target } : {}) };
 }
@@ -225,9 +217,7 @@ export async function getMarkdownStaticPaths() {
   return (await readProjectCache()).routePlan.agentRoutes
     .filter((route) => route.kind === 'page-markdown')
     .map((route) => {
-      if (!route.param) {
-        throw new Error(`astro-fern: Markdown route "${route.id}" is missing its route parameter`);
-      }
+      if (!route.param) throw new Error(`astro-fern: Markdown route "${route.id}" is missing its route parameter`);
       return { params: { document: route.param }, props: { agentRouteId: route.id } };
     });
 }
@@ -237,9 +227,7 @@ export async function getLlmsStaticPaths() {
   return (await readProjectCache()).routePlan.agentRoutes
     .filter((route) => route.kind === 'llms-index' && route.id !== 'llms:site')
     .map((route) => {
-      if (!route.param) {
-        throw new Error(`astro-fern: llms.txt route "${route.id}" is missing its route parameter`);
-      }
+      if (!route.param) throw new Error(`astro-fern: llms.txt route "${route.id}" is missing its route parameter`);
       return { params: { scope: route.param }, props: { agentRouteId: route.id } };
     });
 }
@@ -254,15 +242,9 @@ export async function renderPageMarkdownResponse(
 ): Promise<Response> {
   const project = await readProjectCache();
   const route = project.agentRoutes.get(routeId);
-  if (route?.kind !== 'page-markdown') {
-    return new Response('Not found', { status: 404 });
-  }
-  if (!route?.pageId) {
-    return new Response('Not found', { status: 404 });
-  }
-  if (!project.pageReferences.has(route.pageId)) {
-    return new Response('Not found', { status: 404 });
-  }
+  if (route?.kind !== 'page-markdown') return new Response('Not found', { status: 404 });
+  if (!route?.pageId) return new Response('Not found', { status: 404 });
+  if (!project.pageReferences.has(route.pageId)) return new Response('Not found', { status: 404 });
   const page = await readPage(project, route.pageId, options);
   const document = renderPageMarkdown(page, {
     ...(route.target ? { target: route.target } : {}),

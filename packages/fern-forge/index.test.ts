@@ -114,9 +114,7 @@ test('x-forge-hidden records approval state without hiding documentation', () =>
 
 test('x-forge-hidden only breaks SDK route collisions against one approved operation', () => {
   const source = operation({ 'x-forge-hidden': true });
-  if (!source.paths) {
-    source.paths = {};
-  }
+  if (!source.paths) source.paths = {};
   source.paths['/widgets/approved'] = {
     get: {
       operationId: 'widgets_update_approved',
@@ -140,9 +138,7 @@ test('x-forge-hidden only breaks SDK route collisions against one approved opera
 
 test('SDK route collisions with no approved winner hide every candidate', () => {
   const source = operation({ 'x-forge-hidden': true });
-  if (!source.paths) {
-    source.paths = {};
-  }
+  if (!source.paths) source.paths = {};
   source.paths['/widgets/also-hidden'] = {
     get: {
       operationId: 'widgets_update_also_hidden',
@@ -318,9 +314,7 @@ test('normalizes Fern array SDK groups to Forge dotted groups', () => {
 
 test('excludes operations using removed Forge metadata with one warning', () => {
   const source = operation({ 'x-forge-sunset': { date: '2027-01-01T00:00:00Z' } });
-  if (!source.paths) {
-    source.paths = {};
-  }
+  if (!source.paths) source.paths = {};
   source.paths['/widgets/legacy'] = {
     get: {
       operationId: 'widgets_legacy',

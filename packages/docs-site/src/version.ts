@@ -82,12 +82,8 @@ const WIRE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})\.([a-z]+)$/;
 
 /** True when (year, month, day) is a real calendar date (leap-year aware). */
 function isRealCalendarDate(year: number, month: number, day: number): boolean {
-  if (month < 1 || month > 12) {
-    return false;
-  }
-  if (day < 1 || day > 31) {
-    return false;
-  }
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
   const utc = new Date(Date.UTC(year, month - 1, day));
   return utc.getUTCFullYear() === year && utc.getUTCMonth() === month - 1 && utc.getUTCDate() === day;
 }
@@ -173,9 +169,7 @@ export function tryParseCloudflareApiVersion(input: string): CloudflareApiVersio
  * dated release sorts before the preview.
  */
 export function cloudflareApiVersionSortKey(version: CloudflareApiVersion): string {
-  if (version.channel === 'legacy') {
-    return '0';
-  }
+  if (version.channel === 'legacy') return '0';
   const channelRank = version.channel === 'dated' ? '0' : '1';
   return `1:${version.date}:${channelRank}`;
 }
@@ -184,20 +178,14 @@ export function cloudflareApiVersionSortKey(version: CloudflareApiVersion): stri
 export function compareCloudflareApiVersions(a: CloudflareApiVersion, b: CloudflareApiVersion): number {
   const keyA = cloudflareApiVersionSortKey(a);
   const keyB = cloudflareApiVersionSortKey(b);
-  if (keyA < keyB) {
-    return -1;
-  }
-  if (keyA > keyB) {
-    return 1;
-  }
+  if (keyA < keyB) return -1;
+  if (keyA > keyB) return 1;
   return 0;
 }
 
 /** Human-facing display label, e.g. "Legacy", "2027-01-01 (Air)", "2027-02-01 (Preview)". */
 export function cloudflareApiVersionLabel(version: CloudflareApiVersion): string {
-  if (version.channel === 'legacy') {
-    return 'Legacy';
-  }
+  if (version.channel === 'legacy') return 'Legacy';
   const suffix = version.channel === 'preview' ? 'Preview' : capitalize(version.codename);
   return `${version.date} (${suffix})`;
 }

@@ -47,7 +47,7 @@ const {
 
     connectedCallback() {
       const button = this.querySelector('button');
-      if (!(button instanceof HTMLButtonElement)) {return;}
+      if (!(button instanceof HTMLButtonElement)) return;
       this.#button = button;
       this.#status = this.querySelector('[data-copy-status]') ?? undefined;
       this.#label = button.getAttribute('aria-label') ?? 'Copy to clipboard';
@@ -64,9 +64,9 @@ const {
 
     #copy = async () => {
       const serializedValue = this.dataset.copyValue;
-      if (serializedValue === undefined) {return;}
+      if (serializedValue === undefined) return;
       const value = JSON.parse(serializedValue) as unknown;
-      if (typeof value !== 'string') {return;}
+      if (typeof value !== 'string') return;
 
       const attempt = ++this.#attempt;
       let result = this.dataset.copiedLabel ?? 'Copied to clipboard';
@@ -77,22 +77,22 @@ const {
         result = this.dataset.errorLabel ?? 'Could not copy to clipboard';
         state = 'error';
       }
-      if (attempt !== this.#attempt || !this.isConnected || !this.#button) {return;}
+      if (attempt !== this.#attempt || !this.isConnected || !this.#button) return;
 
       window.clearTimeout(this.#resetTimer);
       this.#button.dataset.copyState = state;
       this.#button.setAttribute('aria-label', result);
       this.#button.title = result;
-      if (this.#status) {this.#status.textContent = result;}
+      if (this.#status) this.#status.textContent = result;
       this.#resetTimer = window.setTimeout(() => this.#reset(), 1600);
     };
 
     #reset() {
-      if (!this.#button) {return;}
+      if (!this.#button) return;
       delete this.#button.dataset.copyState;
       this.#button.setAttribute('aria-label', this.#label);
       this.#button.title = this.#label;
-      if (this.#status) {this.#status.textContent = '';}
+      if (this.#status) this.#status.textContent = '';
     }
   }
 

@@ -28,9 +28,7 @@ function toolingPath(base: string): string {
 
 function decodeCommandPath(pathname: string, basePath: string): string[] | undefined {
   const normalized = normalizePathname(pathname);
-  if (!normalized.startsWith(`${basePath}/`)) {
-    return undefined;
-  }
+  if (!normalized.startsWith(`${basePath}/`)) return undefined;
   const encodedPath = normalized.slice(basePath.length + 1);
   try {
     const fullPath = encodedPath.split('/').map((segment) => decodeURIComponent(segment));
@@ -58,9 +56,7 @@ export function assertToolingRouteNamespace(
   if (toolingPath(apiBase) === toolingNamespace && conflict) {
     throw new Error(`API product "${conflict.id}" conflicts with the ${toolingNamespace}/ route`);
   }
-  if (normalizePathname(apiBase) !== normalizePathname(commandBase)) {
-    return;
-  }
+  if (normalizePathname(apiBase) !== normalizePathname(commandBase)) return;
 
   for (const product of products) {
     const productToolingPath = `${normalizePathname(apiBase)}/${product.slug}/${TOOLING_SEGMENT}`.replace('//', '/');
@@ -70,9 +66,7 @@ export function assertToolingRouteNamespace(
         const pathname = normalizePathname(page.pathname);
         return pathname === productToolingPath || pathname.startsWith(`${productToolingPath}/`);
       });
-    if (route) {
-      throw new Error(`API route "${route.pathname}" conflicts with the ${productToolingPath}/ route`);
-    }
+    if (route) throw new Error(`API route "${route.pathname}" conflicts with the ${productToolingPath}/ route`);
   }
 }
 
@@ -119,21 +113,15 @@ export class CommandRouter {
     const normalizedPathname = normalizePathname(pathname);
     const fullPath = decodeCommandPath(pathname, this.#basePath);
     if (fullPath) {
-      if (products.some((product) => product.id === fullPath[0])) {
-        return undefined;
-      }
+      if (products.some((product) => product.id === fullPath[0])) return undefined;
       return this.#commandsByPath.get(commandKey(fullPath));
     }
 
     for (const product of products) {
       const productPath = `${this.base === '/' ? '' : this.base}/${product.slug}/${TOOLING_SEGMENT}`;
-      if (normalizedPathname === productPath) {
-        return this.#commandsByPath.get(commandKey([product.id]));
-      }
+      if (normalizedPathname === productPath) return this.#commandsByPath.get(commandKey([product.id]));
       const nestedPath = decodeCommandPath(pathname, productPath);
-      if (nestedPath) {
-        return this.#commandsByPath.get(commandKey([product.id, ...nestedPath]));
-      }
+      if (nestedPath) return this.#commandsByPath.get(commandKey([product.id, ...nestedPath]));
     }
     return undefined;
   }

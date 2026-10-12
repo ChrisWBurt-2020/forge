@@ -295,9 +295,7 @@ test('curl uses file input for raw bodies and does not fabricate required multip
   const rawSnippets = cloudflareSnippetsByTarget(raw);
   assert.match(rawSnippets.get('curl') ?? '', /Content-Type: application\/octet-stream/);
   assert.match(rawSnippets.get('curl') ?? '', /--data-binary @request-body/);
-  for (const target of ['cf', 'typescript', 'python', 'ruby']) {
-    assert.equal(rawSnippets.get(target), null);
-  }
+  for (const target of ['cf', 'typescript', 'python', 'ruby']) assert.equal(rawSnippets.get(target), null);
   assert.equal(cloudflareSnippetsByTarget(multipart).get('curl'), null);
 });
 
@@ -425,9 +423,7 @@ test('SDKs include required query params and omit optional query params', () => 
   assert.match(ts, /type: "A"/);
   assert.match(py, /type="A"/);
   assert.match(rb, /type: "A"/);
-  for (const snippet of [ts, py, rb]) {
-    assert.doesNotMatch(snippet, /page[=:]/);
-  }
+  for (const snippet of [ts, py, rb]) assert.doesNotMatch(snippet, /page[=:]/);
 });
 
 test('typescript: normalizes hyphenated Fern group and method names to lower camel case', () => {

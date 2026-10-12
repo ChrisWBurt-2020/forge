@@ -64,15 +64,11 @@ function cachePromise<TKey, TValue>(
   load: () => Promise<TValue>,
 ): Promise<TValue> {
   const existing = cache.get(key);
-  if (existing) {
-    return existing;
-  }
+  if (existing) return existing;
   const promise = Promise.resolve().then(load);
   cache.set(key, promise);
   void promise.catch(() => {
-    if (cache.get(key) === promise) {
-      cache.delete(key);
-    }
+    if (cache.get(key) === promise) cache.delete(key);
   });
   return promise;
 }
@@ -126,35 +122,19 @@ function pageTargetKey(pageId: string, targetId?: string): string {
 }
 
 function llmsKey(request: SemanticLlmsHrefRequest): string {
-  if (request.scope === 'site') {
-    return key('site');
-  }
-  if (request.scope === 'product') {
-    return key('product', request.productId);
-  }
-  if (request.scope === 'snapshot') {
-    return key('snapshot', request.productId, request.snapshotId);
-  }
+  if (request.scope === 'site') return key('site');
+  if (request.scope === 'product') return key('product', request.productId);
+  if (request.scope === 'snapshot') return key('snapshot', request.productId, request.snapshotId);
   return key('target', request.productId, request.snapshotId, request.targetId);
 }
 
 export function llmsRequestForRoute(route: FernAgentRoute): SemanticLlmsHrefRequest | undefined {
   const scope = route.scope ?? {};
-  if (route.kind !== 'llms-index') {
-    return undefined;
-  }
-  if (route.scopeKind === 'site') {
-    return { kind: 'llms', scope: 'site' };
-  }
-  if (!scope.product) {
-    return undefined;
-  }
-  if (route.scopeKind === 'product') {
-    return { kind: 'llms', scope: 'product', productId: scope.product };
-  }
-  if (!scope.snapshot) {
-    return undefined;
-  }
+  if (route.kind !== 'llms-index') return undefined;
+  if (route.scopeKind === 'site') return { kind: 'llms', scope: 'site' };
+  if (!scope.product) return undefined;
+  if (route.scopeKind === 'product') return { kind: 'llms', scope: 'product', productId: scope.product };
+  if (!scope.snapshot) return undefined;
   if (route.scopeKind === 'snapshot') {
     return { kind: 'llms', scope: 'snapshot', productId: scope.product, snapshotId: scope.snapshot };
   }
@@ -232,9 +212,7 @@ export function createFernProjectRuntime(
       markdownRoutesByPage.set(pageTargetKey(route.pageId, route.target), route);
     }
     const request = llmsRequestForRoute(route);
-    if (request) {
-      llmsRoutesByScope.set(llmsKey(request), route);
-    }
+    if (request) llmsRoutesByScope.set(llmsKey(request), route);
   }
 
   return {
@@ -266,13 +244,9 @@ export function resolveFernSemanticHref(project: FernProjectRuntime, request: Se
   const page = project.operationPages.get(
     operationKey(request.productId, request.snapshotId, request.operationId, request.projectionId),
   );
-  if (!page) {
-    return undefined;
-  }
+  if (!page) return undefined;
   if (request.representation === 'human') {
-    if (!request.targetId) {
-      return publicHref(project.routePlan, page.pathname);
-    }
+    if (!request.targetId) return publicHref(project.routePlan, page.pathname);
     if (project.routePlan.routing.target === 'hash') {
       return publicHref(project.routePlan, `${page.pathname}#${encodeURIComponent(request.targetId)}`);
     }
@@ -285,13 +259,9 @@ export function resolveFernSemanticHref(project: FernProjectRuntime, request: Se
 
 export function renderFernLlmsResponse(project: FernProjectRuntime, routeId: string): Response {
   const route = project.agentRoutes.get(routeId);
-  if (!route) {
-    return new Response('Not found', { status: 404 });
-  }
+  if (!route) return new Response('Not found', { status: 404 });
   const request = llmsRequestForRoute(route);
-  if (!request) {
-    return new Response('Not found', { status: 404 });
-  }
+  if (!request) return new Response('Not found', { status: 404 });
   const document = renderLlmsIndexFromCatalog(project.contentCatalog, request, (href) =>
     resolveFernSemanticHref(project, href),
   );

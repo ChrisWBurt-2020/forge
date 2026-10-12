@@ -78,9 +78,7 @@ export function removedForgeOperationFields(operation: Record<string, unknown>):
   const projections = [operation, ...(aliases.success ? aliases.data : [])];
 
   for (const projection of projections) {
-    if (Object.hasOwn(projection, 'x-forge-sunset')) {
-      removed.add('x-forge-sunset');
-    }
+    if (Object.hasOwn(projection, 'x-forge-sunset')) removed.add('x-forge-sunset');
     const params = unknownRecordSchema.safeParse(projection['x-forge-params']);
     if (
       params.success &&

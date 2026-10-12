@@ -110,12 +110,8 @@ function baseHref(base: string): string {
 
 function parseSingleQueryValue(searchParams: URLSearchParams, name: string): string | undefined | typeof INVALID {
   const values = searchParams.getAll(name);
-  if (values.length === 0) {
-    return undefined;
-  }
-  if (values.length !== 1 || values[0] === '') {
-    return INVALID;
-  }
+  if (values.length === 0) return undefined;
+  if (values.length !== 1 || values[0] === '') return INVALID;
   return values[0];
 }
 
@@ -125,12 +121,8 @@ function markdownPath(pathname: string): string {
 
 function withSelection(pathname: string, defaultSnapshotId: string, snapshotId: string, lang?: string): string {
   const search = new URLSearchParams();
-  if (lang !== undefined) {
-    search.set('lang', lang);
-  }
-  if (snapshotId !== defaultSnapshotId) {
-    search.set('version', snapshotId);
-  }
+  if (lang !== undefined) search.set('lang', lang);
+  if (snapshotId !== defaultSnapshotId) search.set('version', snapshotId);
   const query = search.toString();
   return query ? `${pathname}?${query}` : pathname;
 }
@@ -159,9 +151,7 @@ function operationKey(operationId: string, projectionId = 'primary'): string {
 function sectionsForSnapshot(snapshot: FernCatalogSnapshot): ApiCatalogSection[] {
   const sections = new Map<string, ApiCatalogSection>();
   for (const operation of snapshot.pages) {
-    if (operation.placement) {
-      continue;
-    }
+    if (operation.placement) continue;
     let section = sections.get(operation.section.id);
     if (!section) {
       section = { ...operation.section, operations: [] };
@@ -176,9 +166,7 @@ function resourcesForSnapshot(snapshot: FernCatalogSnapshot): ApiCatalogResource
   const roots: ApiCatalogResource[] = [];
   for (const operation of snapshot.pages) {
     const placement = operation.placement;
-    if (!placement) {
-      continue;
-    }
+    if (!placement) continue;
     let siblings = roots;
     const path: ApiResourceSegment[] = [];
     let resource: ApiCatalogResource | undefined;
@@ -205,13 +193,9 @@ function visitResources(resources: ApiCatalogResource[], visit: (resource: ApiCa
 
 function findResource(resources: ApiCatalogResource[], key: string): ApiCatalogResource | undefined {
   for (const resource of resources) {
-    if (resource.key === key) {
-      return resource;
-    }
+    if (resource.key === key) return resource;
     const child = findResource(resource.resources, key);
-    if (child) {
-      return child;
-    }
+    if (child) return child;
   }
   return undefined;
 }
@@ -223,20 +207,14 @@ function resolveSelection(
 ): { snapshot: FernCatalogSnapshot; lang?: string } | undefined {
   const snapshotValue = parseSingleQueryValue(searchParams, 'version');
   const langValue = parseSingleQueryValue(searchParams, 'lang');
-  if (snapshotValue === INVALID || langValue === INVALID) {
-    return undefined;
-  }
+  if (snapshotValue === INVALID || langValue === INVALID) return undefined;
 
   const snapshot =
     snapshotValue === undefined
       ? product.snapshots.find((candidate) => candidate.id === defaultSnapshotId)
       : product.snapshots.find((candidate) => candidate.id === snapshotValue);
-  if (!snapshot) {
-    return undefined;
-  }
-  if (langValue !== undefined && !snapshot.targets.some((target) => target.id === langValue)) {
-    return undefined;
-  }
+  if (!snapshot) return undefined;
+  if (langValue !== undefined && !snapshot.targets.some((target) => target.id === langValue)) return undefined;
   return { snapshot, ...(langValue !== undefined ? { lang: langValue } : {}) };
 }
 
@@ -323,24 +301,16 @@ export class ApiRouter {
 
   /** Resolves an operation only when the requested path is its selected snapshot's own slug. */
   resolveOperation(url: URL, representation: 'human' | 'markdown' = 'human'): ApiOperationSelection | undefined {
-    if (representation === 'markdown' && !url.pathname.endsWith('.md')) {
-      return undefined;
-    }
+    if (representation === 'markdown' && !url.pathname.endsWith('.md')) return undefined;
     const requestPath = representation === 'markdown' ? url.pathname.slice(0, -3) : url.pathname;
     const snapshotValue = parseSingleQueryValue(url.searchParams, 'version');
-    if (snapshotValue === INVALID) {
-      return undefined;
-    }
+    if (snapshotValue === INVALID) return undefined;
     const snapshotId = snapshotValue ?? this.#defaultSnapshotId;
     const location = this.#operationsByPath.get(normalizePath(requestPath))?.get(snapshotId);
-    if (!location) {
-      return undefined;
-    }
+    if (!location) return undefined;
 
     const selection = resolveSelection(location.product, url.searchParams, this.#defaultSnapshotId);
-    if (!selection) {
-      return undefined;
-    }
+    if (!selection) return undefined;
     return {
       kind: 'operation',
       pageId: location.operation.id,
@@ -354,17 +324,13 @@ export class ApiRouter {
 
   resolvePage(url: URL): ApiPageSelection | undefined {
     const operation = this.resolveOperation(url);
-    if (operation) {
-      return operation;
-    }
+    if (operation) return operation;
 
     const pathname = normalizePath(url.pathname);
     const product = this.#productsByPath.get(pathname);
     if (product) {
       const selection = resolveSelection(product, url.searchParams, this.#defaultSnapshotId);
-      if (!selection) {
-        return undefined;
-      }
+      if (!selection) return undefined;
       return {
         kind: 'product',
         pathname: hierarchyPath(this.plan.routing.base, product.slug),
@@ -382,15 +348,11 @@ export class ApiRouter {
     const sectionLocation = this.#sectionsByPath.get(pathname);
     if (sectionLocation) {
       const selection = resolveSelection(sectionLocation.product, url.searchParams, this.#defaultSnapshotId);
-      if (!selection) {
-        return undefined;
-      }
+      if (!selection) return undefined;
       const section = this.pageSections(selection.snapshot).find(
         (candidate) => candidate.id === sectionLocation.sectionId,
       );
-      if (!section) {
-        return undefined;
-      }
+      if (!section) return undefined;
       return {
         kind: 'section',
         pathname: sectionLocation.pathname,
@@ -402,17 +364,11 @@ export class ApiRouter {
     }
 
     const resourceLocation = this.#resourcesByPath.get(pathname);
-    if (!resourceLocation) {
-      return undefined;
-    }
+    if (!resourceLocation) return undefined;
     const selection = resolveSelection(resourceLocation.product, url.searchParams, this.#defaultSnapshotId);
-    if (!selection) {
-      return undefined;
-    }
+    if (!selection) return undefined;
     const resource = resourceLocation.snapshots.get(selection.snapshot.id);
-    if (!resource) {
-      return undefined;
-    }
+    if (!resource) return undefined;
     return {
       kind: 'resource',
       pathname: resourceLocation.pathname,
@@ -426,18 +382,12 @@ export class ApiRouter {
   resolveSiteSelection(url: URL): { snapshot: FernCatalogSiteSnapshot; lang?: string } | undefined {
     const snapshotValue = parseSingleQueryValue(url.searchParams, 'version');
     const langValue = parseSingleQueryValue(url.searchParams, 'lang');
-    if (snapshotValue === INVALID || langValue === INVALID) {
-      return undefined;
-    }
+    if (snapshotValue === INVALID || langValue === INVALID) return undefined;
     const snapshot = this.plan.catalog.snapshots.find(
       (candidate) => candidate.id === (snapshotValue ?? this.#defaultSnapshotId),
     );
-    if (!snapshot) {
-      return undefined;
-    }
-    if (langValue !== undefined && !snapshot.targets.some((target) => target.id === langValue)) {
-      return undefined;
-    }
+    if (!snapshot) return undefined;
+    if (langValue !== undefined && !snapshot.targets.some((target) => target.id === langValue)) return undefined;
     return { snapshot, ...(langValue !== undefined ? { lang: langValue } : {}) };
   }
 
@@ -459,9 +409,7 @@ export class ApiRouter {
 
   siteSnapshotOptions(url: URL): ApiVersionOption[] {
     const selected = this.resolveSiteSelection(url);
-    if (!selected) {
-      return [];
-    }
+    if (!selected) return [];
     return this.plan.catalog.snapshots.map((snapshot) => ({
       label: snapshot.label,
       value:
@@ -473,26 +421,18 @@ export class ApiRouter {
 
   resolveLlms(productSlug: string, searchParams: URLSearchParams): SemanticLlmsHrefRequest | undefined {
     const product = this.#productsBySlug.get(productSlug);
-    if (!product) {
-      return undefined;
-    }
+    if (!product) return undefined;
     const snapshotValue = parseSingleQueryValue(searchParams, 'version');
     const langValue = parseSingleQueryValue(searchParams, 'lang');
-    if (snapshotValue === INVALID || langValue === INVALID) {
-      return undefined;
-    }
+    if (snapshotValue === INVALID || langValue === INVALID) return undefined;
 
     const snapshot =
       snapshotValue === undefined
         ? product.snapshots.find((candidate) => candidate.id === this.#defaultSnapshotId)
         : product.snapshots.find((candidate) => candidate.id === snapshotValue);
-    if (!snapshot) {
-      return undefined;
-    }
+    if (!snapshot) return undefined;
     if (langValue !== undefined) {
-      if (!snapshot.targets.some((target) => target.id === langValue)) {
-        return undefined;
-      }
+      if (!snapshot.targets.some((target) => target.id === langValue)) return undefined;
       return {
         kind: 'llms',
         scope: 'target',
@@ -516,13 +456,9 @@ export class ApiRouter {
 
   productHref(productId: string, snapshotId: string, lang?: string): string | undefined {
     const product = this.#products.get(productId);
-    if (!product) {
-      return undefined;
-    }
+    if (!product) return undefined;
     const snapshot = product.snapshots.find((candidate) => candidate.id === snapshotId);
-    if (!snapshot || (lang !== undefined && !snapshot.targets.some((target) => target.id === lang))) {
-      return undefined;
-    }
+    if (!snapshot || (lang !== undefined && !snapshot.targets.some((target) => target.id === lang))) return undefined;
     return withSelection(
       hierarchyPath(this.plan.routing.base, product.slug),
       this.#defaultSnapshotId,
@@ -533,16 +469,10 @@ export class ApiRouter {
 
   sectionHref(productId: string, snapshotId: string, sectionId: string, lang?: string): string | undefined {
     const product = this.#products.get(productId);
-    if (!product) {
-      return undefined;
-    }
+    if (!product) return undefined;
     const snapshot = product.snapshots.find((candidate) => candidate.id === snapshotId);
-    if (!snapshot || (lang !== undefined && !snapshot.targets.some((target) => target.id === lang))) {
-      return undefined;
-    }
-    if (!this.pageSections(snapshot).some((candidate) => candidate.id === sectionId)) {
-      return undefined;
-    }
+    if (!snapshot || (lang !== undefined && !snapshot.targets.some((target) => target.id === lang))) return undefined;
+    if (!this.pageSections(snapshot).some((candidate) => candidate.id === sectionId)) return undefined;
     const pathname = hierarchyPath(this.plan.routing.base, product.slug, 'sections', sectionId);
     return withSelection(pathname, this.#defaultSnapshotId, snapshot.id, lang);
   }
@@ -554,16 +484,10 @@ export class ApiRouter {
     lang?: string,
   ): string | undefined {
     const product = this.#products.get(productId);
-    if (!product) {
-      return undefined;
-    }
+    if (!product) return undefined;
     const snapshot = product.snapshots.find((candidate) => candidate.id === snapshotId);
-    if (!snapshot || (lang !== undefined && !snapshot.targets.some((target) => target.id === lang))) {
-      return undefined;
-    }
-    if (!findResource(this.pageResources(snapshot), resourceKey(path))) {
-      return undefined;
-    }
+    if (!snapshot || (lang !== undefined && !snapshot.targets.some((target) => target.id === lang))) return undefined;
+    if (!findResource(this.pageResources(snapshot), resourceKey(path))) return undefined;
     return withSelection(
       resourcePathname(this.plan.routing.base, product.slug, path),
       this.#defaultSnapshotId,
@@ -581,17 +505,11 @@ export class ApiRouter {
     projectionId = 'primary',
   ): string | undefined {
     const product = this.#products.get(productId);
-    if (!product) {
-      return undefined;
-    }
+    if (!product) return undefined;
     const snapshot = product.snapshots.find((candidate) => candidate.id === snapshotId);
-    if (!snapshot || (lang !== undefined && !snapshot.targets.some((target) => target.id === lang))) {
-      return undefined;
-    }
+    if (!snapshot || (lang !== undefined && !snapshot.targets.some((target) => target.id === lang))) return undefined;
     const operation = this.#operationsBySnapshot.get(snapshot)?.get(operationKey(operationId, projectionId));
-    if (!operation) {
-      return undefined;
-    }
+    if (!operation) return undefined;
     const pathname = operationPath(this.plan.routing.base, product.slug, operation.slug);
     return withSelection(
       representation === 'markdown' ? markdownPath(pathname) : pathname,
@@ -611,9 +529,8 @@ export class ApiRouter {
       { label: 'API Reference', href: siteHref },
       { label: selection.product.title, ...(productHref ? { href: productHref } : {}) },
     ];
-    if (selection.kind === 'product') {
+    if (selection.kind === 'product')
       return breadcrumbs.map((item, index) => (index === breadcrumbs.length - 1 ? { label: item.label } : item));
-    }
 
     const resourcePath =
       selection.kind === 'resource'
@@ -628,30 +545,21 @@ export class ApiRouter {
         const current = selection.kind === 'resource' && index === resourcePath.length - 1;
         breadcrumbs.push({ label: resource.title, ...(!current && href ? { href } : {}) });
       });
-      if (selection.kind === 'operation') {
-        breadcrumbs.push({ label: selection.operation.title });
-      }
+      if (selection.kind === 'operation') breadcrumbs.push({ label: selection.operation.title });
       return breadcrumbs;
     }
-    if (selection.kind === 'resource') {
-      return breadcrumbs;
-    }
+    if (selection.kind === 'resource') return breadcrumbs;
 
     const section = selection.kind === 'section' ? selection.section : selection.operation.section;
     const sectionHref = this.sectionHref(selection.product.id, selection.snapshot.id, section.id, selection.lang);
     breadcrumbs.push({ label: section.title, ...(sectionHref ? { href: sectionHref } : {}) });
-    if (selection.kind === 'operation') {
-      breadcrumbs.push({ label: selection.operation.title });
-    } else {
-      breadcrumbs[breadcrumbs.length - 1] = { label: section.title };
-    }
+    if (selection.kind === 'operation') breadcrumbs.push({ label: selection.operation.title });
+    else breadcrumbs[breadcrumbs.length - 1] = { label: section.title };
     return breadcrumbs;
   }
 
   private pageHref(selection: ApiPageSelection, snapshotId: string, lang?: string): string | undefined {
-    if (selection.kind === 'product') {
-      return this.productHref(selection.product.id, snapshotId, lang);
-    }
+    if (selection.kind === 'product') return this.productHref(selection.product.id, snapshotId, lang);
     if (selection.kind === 'section') {
       return this.sectionHref(selection.product.id, snapshotId, selection.section.id, lang);
     }
@@ -687,27 +595,19 @@ export class ApiRouter {
         request.projectionId,
       );
     }
-    if (request.scope === 'site') {
-      return `${this.siteHref}llms.txt`;
-    }
+    if (request.scope === 'site') return `${this.siteHref}llms.txt`;
     const product = this.#products.get(request.productId);
-    if (!product) {
-      return undefined;
-    }
+    if (!product) return undefined;
     const pathname = `${hierarchyPath(this.plan.routing.base, product.slug)}llms.txt`;
     if (request.scope === 'product') {
       return product.snapshots.some((snapshot) => snapshot.id === this.#defaultSnapshotId) ? pathname : undefined;
     }
     const snapshot = product.snapshots.find((candidate) => candidate.id === request.snapshotId);
-    if (!snapshot) {
-      return undefined;
-    }
+    if (!snapshot) return undefined;
     if (request.scope === 'snapshot') {
       return withSelection(pathname, this.#defaultSnapshotId, request.snapshotId);
     }
-    if (!snapshot.targets.some((target) => target.id === request.targetId)) {
-      return undefined;
-    }
+    if (!snapshot.targets.some((target) => target.id === request.targetId)) return undefined;
     return withSelection(pathname, this.#defaultSnapshotId, request.snapshotId, request.targetId);
   }
 }

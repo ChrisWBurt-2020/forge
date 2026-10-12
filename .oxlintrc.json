@@ -12,6 +12,12 @@
   "ignorePatterns": ["node_modules", "dist", "**/_generated/**", ".wrangler"],
   "overrides": [
     {
+      "files": ["packages/astro-fern/**", "packages/docs-site/**", "packages/fern-forge/**"],
+      "rules": {
+        "curly": "off"
+      }
+    },
+    {
       "files": ["src/bin/forge/ts/lib/**"],
       "plugins": ["typescript", "unicorn", "oxc", "import", "node"],
       "rules": {

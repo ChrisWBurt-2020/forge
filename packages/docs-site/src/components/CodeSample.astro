@@ -48,11 +48,11 @@ const responseViews = responses.map((response) => {
 });
 
 function responseSyntax(mediaType: string): string {
-  if (isJsonMediaType(mediaType)) {return 'json';}
+  if (isJsonMediaType(mediaType)) return 'json';
   const essence = mediaType.split(';', 1)[0]?.trim().toLowerCase();
-  if (essence === 'text/html' || essence?.endsWith('+xml') || essence?.includes('/xml')) {return 'markup';}
-  if (essence === 'text/css') {return 'css';}
-  if (essence?.includes('javascript')) {return 'javascript';}
+  if (essence === 'text/html' || essence?.endsWith('+xml') || essence?.includes('/xml')) return 'markup';
+  if (essence === 'text/css') return 'css';
+  if (essence?.includes('javascript')) return 'javascript';
   return 'text';
 }
 
@@ -81,13 +81,13 @@ function jsonExample(value: JsonValueSchema): string {
 }
 
 function codeSampleLabel(sample: OperationCodeSampleSchema): string {
-  if (sample.kind === 'language') {return sample.language;}
-  if (sample.sdk === 'csharp') {return 'C#';}
-  if (sample.sdk === 'go') {return 'Go';}
-  if (sample.sdk === 'java') {return 'Java';}
-  if (sample.sdk === 'javascript') {return 'JavaScript';}
-  if (sample.sdk === 'ruby') {return 'Ruby';}
-  if (sample.sdk === 'typescript') {return 'TypeScript';}
+  if (sample.kind === 'language') return sample.language;
+  if (sample.sdk === 'csharp') return 'C#';
+  if (sample.sdk === 'go') return 'Go';
+  if (sample.sdk === 'java') return 'Java';
+  if (sample.sdk === 'javascript') return 'JavaScript';
+  if (sample.sdk === 'ruby') return 'Ruby';
+  if (sample.sdk === 'typescript') return 'TypeScript';
   return sample.sdk;
 }
 
@@ -818,32 +818,32 @@ function codeSampleSyntax(sample: OperationCodeSampleSchema): string {
     #tabs: HTMLButtonElement[] = [];
 
     #onClick = (event: MouseEvent) => {
-      if (!(event.target instanceof Element)) {return;}
+      if (!(event.target instanceof Element)) return;
       const tab = event.target.closest<HTMLButtonElement>('[data-response-tab]');
-      if (!tab || !this.contains(tab)) {return;}
+      if (!tab || !this.contains(tab)) return;
       this.#activate(tab, false);
     };
 
     #onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.target instanceof HTMLButtonElement) || !event.target.matches('[data-response-tab]')) {return;}
+      if (!(event.target instanceof HTMLButtonElement) || !event.target.matches('[data-response-tab]')) return;
       const currentIndex = this.#tabs.indexOf(event.target);
-      if (currentIndex < 0) {return;}
+      if (currentIndex < 0) return;
 
       let nextIndex: number | undefined;
-      if (event.key === 'ArrowRight') {nextIndex = (currentIndex + 1) % this.#tabs.length;}
-      if (event.key === 'ArrowLeft') {nextIndex = (currentIndex - 1 + this.#tabs.length) % this.#tabs.length;}
-      if (event.key === 'Home') {nextIndex = 0;}
-      if (event.key === 'End') {nextIndex = this.#tabs.length - 1;}
-      if (nextIndex === undefined) {return;}
+      if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % this.#tabs.length;
+      if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + this.#tabs.length) % this.#tabs.length;
+      if (event.key === 'Home') nextIndex = 0;
+      if (event.key === 'End') nextIndex = this.#tabs.length - 1;
+      if (nextIndex === undefined) return;
 
       event.preventDefault();
       const tab = this.#tabs[nextIndex];
-      if (tab) {this.#activate(tab, true);}
+      if (tab) this.#activate(tab, true);
     };
 
     #onChange = (event: Event) => {
       if (!(event.target instanceof HTMLSelectElement) || !event.target.matches('[data-response-representation]'))
-        {return;}
+        return;
       this.#selectRepresentation(event.target);
     };
 
@@ -854,7 +854,7 @@ function codeSampleSyntax(sample: OperationCodeSampleSchema): string {
       this.addEventListener('change', this.#onChange);
       const selectedTab =
         this.#tabs.find((tab) => tab.getAttribute('aria-selected') === 'true') ?? this.#tabs[0];
-      if (selectedTab) {this.#activate(selectedTab, false);}
+      if (selectedTab) this.#activate(selectedTab, false);
       for (const select of this.querySelectorAll<HTMLSelectElement>('[data-response-representation]')) {
         this.#selectRepresentation(select);
       }
@@ -878,12 +878,12 @@ function codeSampleSyntax(sample: OperationCodeSampleSchema): string {
         panel.toggleAttribute('data-inactive', !selected);
         panel.setAttribute('aria-hidden', String(!selected));
       }
-      if (focus) {activeTab.focus();}
+      if (focus) activeTab.focus();
     }
 
     #selectRepresentation(select: HTMLSelectElement) {
       const responsePanel = select.closest<HTMLElement>('[data-response-panel]');
-      if (!responsePanel) {return;}
+      if (!responsePanel) return;
       for (const panel of responsePanel.querySelectorAll<HTMLElement>('[data-response-representation-panel]')) {
         const selected = panel.dataset.representationIndex === select.value;
         panel.toggleAttribute('data-inactive', !selected);
@@ -914,7 +914,7 @@ function codeSampleSyntax(sample: OperationCodeSampleSchema): string {
     #onPageHide = () => this.#save();
 
     #measurePane = () => {
-      if (this.#pane) {this.#pane.style.setProperty('--forge-example-height', `${this.#pane.offsetHeight}px`);}
+      if (this.#pane) this.#pane.style.setProperty('--forge-example-height', `${this.#pane.offsetHeight}px`);
     };
 
     #onTargetChange = () => {
@@ -963,13 +963,13 @@ function codeSampleSyntax(sample: OperationCodeSampleSchema): string {
           savedAt?: number;
         } | null;
         sessionStorage.removeItem(pendingScrollKey);
-        if (pending?.key !== this.#key || !pending.savedAt || Date.now() - pending.savedAt > 30_000) {return;}
+        if (pending?.key !== this.#key || !pending.savedAt || Date.now() - pending.savedAt > 30_000) return;
 
         const top = Number(sessionStorage.getItem(this.#key));
-        if (!Number.isFinite(top)) {return;}
+        if (!Number.isFinite(top)) return;
         const restore = () => window.scrollTo(0, top);
         requestAnimationFrame(() => requestAnimationFrame(restore));
-        if (document.readyState !== 'complete') {window.addEventListener('load', restore, { once: true });}
+        if (document.readyState !== 'complete') window.addEventListener('load', restore, { once: true });
       } catch {}
     }
   }

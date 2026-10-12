@@ -9,7 +9,7 @@ const resolved = await getFernPageForPath(Astro.url.pathname, {
   ...(Astro.locals.fernRequestCache ? { cache: Astro.locals.fernRequestCache } : {}),
   ...(fetcher ? { request: Astro.request, fetcher } : {}),
 });
-if (!resolved) {return new Response('Not found', { status: 404 });}
+if (!resolved) return new Response('Not found', { status: 404 });
 
 const { page } = resolved;
 const responseFields = page.operation.responses.flatMap((response) =>

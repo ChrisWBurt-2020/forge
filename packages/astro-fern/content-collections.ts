@@ -51,24 +51,12 @@ export type MarkdownRenderer = (markdown: string) => Promise<RichTextSchema>;
 
 async function enrichSchemaNode(node: SchemaNode, render: MarkdownRenderer): Promise<RenderedSchemaNodeSchema> {
   const out: RenderedSchemaNodeSchema = { type: node.type, required: node.required };
-  if (node.name !== undefined) {
-    out.name = node.name;
-  }
-  if (node.sdkName !== undefined) {
-    out.sdkName = node.sdkName;
-  }
-  if (node.title !== undefined) {
-    out.title = node.title;
-  }
-  if (node.format !== undefined) {
-    out.format = node.format;
-  }
-  if (node.description) {
-    out.description = await render(node.description);
-  }
-  if (node.enumValues) {
-    out.enumValues = node.enumValues;
-  }
+  if (node.name !== undefined) out.name = node.name;
+  if (node.sdkName !== undefined) out.sdkName = node.sdkName;
+  if (node.title !== undefined) out.title = node.title;
+  if (node.format !== undefined) out.format = node.format;
+  if (node.description) out.description = await render(node.description);
+  if (node.enumValues) out.enumValues = node.enumValues;
   if (node.enumValueMetadata) {
     out.enumValueMetadata = await Promise.all(
       node.enumValueMetadata.map(async (metadata) => ({
@@ -78,24 +66,13 @@ async function enrichSchemaNode(node: SchemaNode, render: MarkdownRenderer): Pro
       })),
     );
   }
-  if (node.default !== undefined) {
-    out.default = node.default;
-  }
-  if (node.deprecated) {
-    out.deprecated = node.deprecated;
-  }
-  if (node.children) {
-    out.children = await Promise.all(node.children.map((child) => enrichSchemaNode(child, render)));
-  }
-  if (node.items) {
-    out.items = await enrichSchemaNode(node.items, render);
-  }
-  if (node.variants) {
+  if (node.default !== undefined) out.default = node.default;
+  if (node.deprecated) out.deprecated = node.deprecated;
+  if (node.children) out.children = await Promise.all(node.children.map((child) => enrichSchemaNode(child, render)));
+  if (node.items) out.items = await enrichSchemaNode(node.items, render);
+  if (node.variants)
     out.variants = await Promise.all(node.variants.map((variant) => enrichSchemaNode(variant, render)));
-  }
-  if (node.apiFieldPath) {
-    out.apiFieldPath = node.apiFieldPath;
-  }
+  if (node.apiFieldPath) out.apiFieldPath = node.apiFieldPath;
   return out;
 }
 
@@ -128,21 +105,11 @@ async function enrichResponseExample(
   render: MarkdownRenderer,
 ): Promise<RenderedResponseExampleSchema> {
   const out: RenderedResponseExampleSchema = {};
-  if (example.name !== undefined) {
-    out.name = example.name;
-  }
-  if (example.summary !== undefined) {
-    out.summary = example.summary;
-  }
-  if (example.description !== undefined) {
-    out.description = await render(example.description);
-  }
-  if (example.value !== undefined) {
-    out.value = example.value;
-  }
-  if (example.externalValue !== undefined) {
-    out.externalValue = example.externalValue;
-  }
+  if (example.name !== undefined) out.name = example.name;
+  if (example.summary !== undefined) out.summary = example.summary;
+  if (example.description !== undefined) out.description = await render(example.description);
+  if (example.value !== undefined) out.value = example.value;
+  if (example.externalValue !== undefined) out.externalValue = example.externalValue;
   return out;
 }
 
@@ -155,12 +122,8 @@ async function enrichResponseRepresentation(
     Promise.all(representation.examples.map((example) => enrichResponseExample(example, render))),
   ]);
   const out: RenderedResponseRepresentationSchema = { mediaType: representation.mediaType, schema, examples };
-  if (representation.payloadKey !== undefined) {
-    out.payloadKey = representation.payloadKey;
-  }
-  if (representation.generatedExample !== undefined) {
-    out.generatedExample = representation.generatedExample;
-  }
+  if (representation.payloadKey !== undefined) out.payloadKey = representation.payloadKey;
+  if (representation.generatedExample !== undefined) out.generatedExample = representation.generatedExample;
   return out;
 }
 
@@ -202,12 +165,8 @@ export async function enrichOperation(
     requestBody,
     responses,
   };
-  if (operation.availability) {
-    out.availability = operation.availability;
-  }
-  if (operation.requireConfirmation) {
-    out.requireConfirmation = operation.requireConfirmation;
-  }
+  if (operation.availability) out.availability = operation.availability;
+  if (operation.requireConfirmation) out.requireConfirmation = operation.requireConfirmation;
   return out;
 }
 
@@ -238,9 +197,7 @@ function cachedRenderer(renderMarkdown: LoaderContext['renderMarkdown']): Markdo
   const cache = new Map<string, RichTextSchema>();
   return async (markdown: string): Promise<RichTextSchema> => {
     const hit = cache.get(markdown);
-    if (hit) {
-      return hit;
-    }
+    if (hit) return hit;
     const { html } = await renderMarkdown(markdown);
     const rich: RichTextSchema = { markdown, html };
     cache.set(markdown, rich);
@@ -254,13 +211,9 @@ async function sourceForContext(
 ): Promise<FernProjectOptions['source']> {
   const providerSources = new Map<FernSourceProvider, Promise<FernSource>>();
   const resolve = (candidate: FernSource | FernSourceProvider): Promise<FernSource> => {
-    if (typeof candidate !== 'function') {
-      return resolveSourceForContext(candidate, root);
-    }
+    if (typeof candidate !== 'function') return resolveSourceForContext(candidate, root);
     const existing = providerSources.get(candidate);
-    if (existing) {
-      return existing;
-    }
+    if (existing) return existing;
     const pending = resolveSourceForContext(candidate, root);
     providerSources.set(candidate, pending);
     return pending;
@@ -287,9 +240,7 @@ function watchedSources(source: FernContentOptions['source'], root: URL): string
   if (isFernSnapshotSources(source)) {
     return source.snapshots.flatMap((snapshot) => watchedSources(snapshot.source, root));
   }
-  if (typeof source === 'function') {
-    return [];
-  }
+  if (typeof source === 'function') return [];
   const resolved = typeof source === 'string' ? new URL(source, root) : source;
   return resolved instanceof URL && resolved.protocol === 'file:' ? [fileURLToPath(resolved)] : [];
 }
@@ -431,9 +382,7 @@ export function fernContentLoader(options: FernContentOptions) {
         try {
           await loadFernContent(options, latestContext ?? context);
         } catch (error) {
-          if (initial) {
-            throw error;
-          }
+          if (initial) throw error;
           const reason = error instanceof Error ? error.message : String(error);
           (latestContext ?? context).logger.error(`Failed to reload Fern content: ${reason}`);
         }
@@ -445,9 +394,7 @@ export function fernContentLoader(options: FernContentOptions) {
   };
 
   const onSourceChange = (changedPath: string) => {
-    if (sourcePaths.has(changedPath) && latestContext) {
-      void scheduleBuild(latestContext, false);
-    }
+    if (sourcePaths.has(changedPath) && latestContext) void scheduleBuild(latestContext, false);
   };
 
   return {
@@ -457,9 +404,7 @@ export function fernContentLoader(options: FernContentOptions) {
       latestContext = context;
       sourcePaths = new Set(watchedSources(options.source, context.config.root));
       if (sourcePaths.size > 0 && context.watcher) {
-        for (const sourcePath of sourcePaths) {
-          context.watcher.add(sourcePath);
-        }
+        for (const sourcePath of sourcePaths) context.watcher.add(sourcePath);
         for (const event of ['add', 'change', 'unlink'] as const) {
           context.watcher.off(event, onSourceChange);
           context.watcher.on(event, onSourceChange);

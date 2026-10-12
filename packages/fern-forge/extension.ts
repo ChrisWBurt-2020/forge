@@ -23,9 +23,7 @@ const extension = defineFernExtension<ForgeOperationDataSchema, ForgeExtensionSt
   prepare: prepareForge,
   operation({ operation }, state) {
     const parsed = state.operations.get(operation);
-    if (!parsed) {
-      return undefined;
-    }
+    if (!parsed) return undefined;
     return {
       ...(parsed.primary ? { data: parsed.primary, presentation: presentation(parsed.primary) } : {}),
       variants: parsed.aliases.map((alias) => ({

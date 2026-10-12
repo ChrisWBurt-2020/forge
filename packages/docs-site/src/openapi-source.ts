@@ -43,9 +43,7 @@ export async function loadForgeOpenApi(
   release = process.env['FORGE_OPENAPI_RELEASE'],
   readTextFile: (path: string) => Promise<string> = (path) => readFile(path, 'utf8'),
 ): Promise<unknown> {
-  if (!specPath) {
-    return fetchForgeOpenApi(release);
-  }
+  if (!specPath) return fetchForgeOpenApi(release);
 
   let source: string;
   try {

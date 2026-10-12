@@ -104,9 +104,7 @@ function escapeMarkdownText(value: string): string {
 }
 
 function headingName(node: RenderedSchemaNodeSchema): string {
-  if (node.name) {
-    return `\`${node.name}\``;
-  }
+  if (node.name) return `\`${node.name}\``;
   return node.title ?? node.type;
 }
 
@@ -114,12 +112,8 @@ function schemaLines(nodes: RenderedSchemaNodeSchema[], depth = 3): string[] {
   const lines: string[] = [];
   for (const node of nodes) {
     lines.push(`${'#'.repeat(Math.min(depth, 6))} ${headingName(node)}`, '', `Type: \`${node.type}\`  `);
-    if (node.format) {
-      lines.push(`Format: \`${node.format}\`  `);
-    }
-    if (node.name) {
-      lines.push(`Required: ${node.required ? 'yes' : 'no'}  `);
-    }
+    if (node.format) lines.push(`Format: \`${node.format}\`  `);
+    if (node.name) lines.push(`Required: ${node.required ? 'yes' : 'no'}  `);
     if (node.enumValues?.length) {
       if (node.enumValueMetadata?.length) {
         lines.push('Allowed values:', '');
@@ -135,59 +129,32 @@ function schemaLines(nodes: RenderedSchemaNodeSchema[], depth = 3): string[] {
         lines.push(`Allowed values: ${node.enumValues.map((value) => markdownCode(String(value))).join(', ')}  `);
       }
     }
-    if (node.default !== undefined) {
-      lines.push(`Default: \`${String(node.default)}\`  `);
-    }
-    if (node.deprecated) {
-      lines.push('Deprecated: yes  ');
-    }
+    if (node.default !== undefined) lines.push(`Default: \`${String(node.default)}\`  `);
+    if (node.deprecated) lines.push('Deprecated: yes  ');
     // Agents consume the raw Markdown source, not the rendered HTML.
-    if (node.description) {
-      lines.push('', markdownBlock(node.description.markdown));
-    }
+    if (node.description) lines.push('', markdownBlock(node.description.markdown));
     lines.push('');
-    if (node.children?.length) {
-      lines.push(...schemaLines(node.children, depth + 1));
-    }
-    if (node.items) {
-      lines.push(...schemaLines([node.items], depth + 1));
-    }
-    if (node.variants?.length) {
-      lines.push(...schemaLines(node.variants, depth + 1));
-    }
+    if (node.children?.length) lines.push(...schemaLines(node.children, depth + 1));
+    if (node.items) lines.push(...schemaLines([node.items], depth + 1));
+    if (node.variants?.length) lines.push(...schemaLines(node.variants, depth + 1));
   }
   return lines;
 }
 
 function topLevelNodes(node: RenderedSchemaNodeSchema | null): RenderedSchemaNodeSchema[] {
-  if (!node) {
-    return [];
-  }
-  if (node.children?.length) {
-    return node.children;
-  }
-  if (node.variants?.length) {
-    return node.variants;
-  }
+  if (!node) return [];
+  if (node.children?.length) return node.children;
+  if (node.variants?.length) return node.variants;
   return [node];
 }
 
 function targetLines(target: FernExecutionTargetSchema): string[] {
   const lines = [`## Execute with ${target.label}`, ''];
-  if (target.packageName) {
-    lines.push(`Package: \`${target.packageName}\`  `);
-  }
-  if (target.version) {
-    lines.push(`Version: \`${target.version}\`  `);
-  }
-  if (target.packageName || target.version) {
-    lines.push('');
-  }
-  if (target.code) {
-    lines.push(`\`\`\`${target.syntax}`, target.code, '```', '');
-  } else {
-    lines.push(`A ${target.label} example is not available yet.`, '');
-  }
+  if (target.packageName) lines.push(`Package: \`${target.packageName}\`  `);
+  if (target.version) lines.push(`Version: \`${target.version}\`  `);
+  if (target.packageName || target.version) lines.push('');
+  if (target.code) lines.push(`\`\`\`${target.syntax}`, target.code, '```', '');
+  else lines.push(`A ${target.label} example is not available yet.`, '');
   return lines;
 }
 
@@ -205,29 +172,18 @@ function explicitExampleLines(
 ): string[] {
   const title = example.name !== undefined ? `Example ${markdownCode(example.name)}` : 'Example';
   const lines = [`##### ${title}`, ''];
-  if (example.summary) {
-    lines.push(`Summary: ${clean(example.summary)}  `);
-  }
-  if (example.description) {
-    lines.push('', markdownBlock(example.description.markdown), '');
-  }
-  if (example.externalValue) {
-    lines.push(`External value: ${clean(example.externalValue)}  `, '');
-  }
-  if (example.value !== undefined) {
-    lines.push(...exampleValueLines(example.value, representation.mediaType));
-  }
+  if (example.summary) lines.push(`Summary: ${clean(example.summary)}  `);
+  if (example.description) lines.push('', markdownBlock(example.description.markdown), '');
+  if (example.externalValue) lines.push(`External value: ${clean(example.externalValue)}  `, '');
+  if (example.value !== undefined) lines.push(...exampleValueLines(example.value, representation.mediaType));
   return lines;
 }
 
 function responseRepresentationLines(representation: RenderedResponseRepresentationSchema): string[] {
   const lines = [`#### ${markdownCode(representation.mediaType)}`, ''];
-  if (representation.payloadKey) {
+  if (representation.payloadKey)
     lines.push(`Documentation payload key: ${markdownCode(representation.payloadKey)}  `, '');
-  }
-  for (const example of representation.examples) {
-    lines.push(...explicitExampleLines(example, representation));
-  }
+  for (const example of representation.examples) lines.push(...explicitExampleLines(example, representation));
   if (representation.examples.length === 0 && representation.generatedExample !== undefined) {
     lines.push(
       '##### Generated example',
@@ -235,9 +191,7 @@ function responseRepresentationLines(representation: RenderedResponseRepresentat
       ...exampleValueLines(representation.generatedExample, representation.mediaType),
     );
   }
-  if (representation.schema) {
-    lines.push('##### Schema', '', ...schemaLines([representation.schema], 6));
-  }
+  if (representation.schema) lines.push('##### Schema', '', ...schemaLines([representation.schema], 6));
   return lines;
 }
 
@@ -248,9 +202,7 @@ function responseLines(response: RenderedOperationResponseSchema): string[] {
     `Category: ${classifyResponseStatus(response.status)}  `,
     '',
   ];
-  if (response.description.markdown) {
-    lines.push(markdownBlock(response.description.markdown), '');
-  }
+  if (response.description.markdown) lines.push(markdownBlock(response.description.markdown), '');
   for (const representation of response.representations) {
     lines.push(...responseRepresentationLines(representation));
   }
@@ -262,9 +214,7 @@ function lifecycleLines(operation: RenderedOperationSchema): string[] {
     const message = operation.availability?.status === 'deprecated' ? operation.availability.message : undefined;
     return [`- Availability: deprecated${message ? ` (${clean(message)})` : ''}`];
   }
-  if (!operation.availability) {
-    return [];
-  }
+  if (!operation.availability) return [];
   return [
     `- Availability: ${operation.availability.status}${
       operation.availability.message ? ` (${operation.availability.message})` : ''
@@ -329,9 +279,7 @@ function operationExampleLines(example: OperationExampleSchema, index: number): 
 export function renderPageMarkdown(page: FernPageSchema, options: RenderPageMarkdownOptions = {}): AgentDocument {
   const operation = page.operation;
   const lines: string[] = [];
-  if (options.directive) {
-    lines.push(options.directive, '');
-  }
+  if (options.directive) lines.push(options.directive, '');
   lines.push(
     `# ${operation.title}`,
     '',
@@ -349,12 +297,8 @@ export function renderPageMarkdown(page: FernPageSchema, options: RenderPageMark
     ...lifecycleLines(operation),
     '',
   );
-  if (operation.pathParams.length) {
-    lines.push('## Path parameters', '', ...schemaLines(operation.pathParams));
-  }
-  if (operation.queryParams.length) {
-    lines.push('## Query parameters', '', ...schemaLines(operation.queryParams));
-  }
+  if (operation.pathParams.length) lines.push('## Path parameters', '', ...schemaLines(operation.pathParams));
+  if (operation.queryParams.length) lines.push('## Query parameters', '', ...schemaLines(operation.queryParams));
   if (operation.requestBody) {
     const representation = preferredRequestRepresentation(operation.requestBody.representations);
     lines.push(
@@ -367,9 +311,7 @@ export function renderPageMarkdown(page: FernPageSchema, options: RenderPageMark
           : 'none declared'
       }  `,
     );
-    if (operation.requestBody.description) {
-      lines.push('', markdownBlock(operation.requestBody.description.markdown));
-    }
+    if (operation.requestBody.description) lines.push('', markdownBlock(operation.requestBody.description.markdown));
     if (representation?.schema) {
       lines.push(
         '',
@@ -387,14 +329,10 @@ export function renderPageMarkdown(page: FernPageSchema, options: RenderPageMark
     operation.examples.forEach((example, index) => lines.push(...operationExampleLines(example, index)));
   }
   const targets = options.target ? page.targets.filter((target) => target.id === options.target) : page.targets;
-  for (const target of targets) {
-    lines.push(...targetLines(target));
-  }
+  for (const target of targets) lines.push(...targetLines(target));
   if (operation.responses.length) {
     lines.push('## Responses', '');
-    for (const response of operation.responses) {
-      lines.push(...responseLines(response));
-    }
+    for (const response of operation.responses) lines.push(...responseLines(response));
   }
   if (!options.resolveHref) {
     lines.push(
@@ -421,9 +359,7 @@ export function renderPageMarkdown(page: FernPageSchema, options: RenderPageMark
       ...identity,
       ...(options.target !== undefined ? { targetId: options.target } : {}),
     });
-    if (humanHref !== undefined) {
-      related.push(`- [Human documentation](${humanHref})`);
-    }
+    if (humanHref !== undefined) related.push(`- [Human documentation](${humanHref})`);
     for (const target of page.targets) {
       const href = options.resolveHref({
         kind: 'operation',
@@ -431,9 +367,7 @@ export function renderPageMarkdown(page: FernPageSchema, options: RenderPageMark
         ...identity,
         targetId: target.id,
       });
-      if (href !== undefined) {
-        related.push(`- [${target.label} Markdown](${href})`);
-      }
+      if (href !== undefined) related.push(`- [${target.label} Markdown](${href})`);
     }
     const llmsRequests: SemanticLlmsHrefRequest[] = [
       { kind: 'llms', scope: 'site' },
@@ -447,9 +381,7 @@ export function renderPageMarkdown(page: FernPageSchema, options: RenderPageMark
     ];
     for (const request of llmsRequests) {
       const href = options.resolveHref(request);
-      if (href !== undefined) {
-        related.push(`- [${request.scope} llms.txt](${href})`);
-      }
+      if (href !== undefined) related.push(`- [${request.scope} llms.txt](${href})`);
     }
     lines.push('## Related representations', '', ...related, '');
   }
@@ -508,13 +440,9 @@ function catalogSelection(
   catalog: FernContentCatalogSchema,
   request: SemanticLlmsHrefRequest,
 ): { product?: CatalogProduct; snapshot?: CatalogSnapshot } {
-  if (request.scope === 'site') {
-    return {};
-  }
+  if (request.scope === 'site') return {};
   const product = catalogProduct(catalog, request.productId);
-  if (request.scope === 'product') {
-    return { product, snapshot: catalogDefaultSnapshot(product) };
-  }
+  if (request.scope === 'product') return { product, snapshot: catalogDefaultSnapshot(product) };
   const snapshot = catalogSnapshot(product, request.snapshotId);
   if (request.scope === 'target' && !snapshot.targets.some((target) => target.id === request.targetId)) {
     throw new Error(
@@ -572,9 +500,7 @@ export function renderLlmsIndexFromCatalog(
           );
         }
       }
-      if (operations.length) {
-        lines.push(`### ${section.title}`, '', ...operations);
-      }
+      if (operations.length) lines.push(`### ${section.title}`, '', ...operations);
     }
     lines.push('', '## Execution targets', '');
     for (const target of snapshot.targets) {
@@ -622,9 +548,7 @@ export function renderLlmsIndex(data: FernProjectView, route: FernAgentRoute): A
     const documents = new Map(data.pages.map((page) => [page.id, page]));
     for (const page of snapshot.pages) {
       const document = documents.get(page.id);
-      if (!document) {
-        continue;
-      }
+      if (!document) continue;
       if (page.section.id !== sectionId) {
         sectionId = page.section.id;
         lines.push(`### ${page.section.title}`, '');
@@ -636,9 +560,8 @@ export function renderLlmsIndex(data: FernProjectView, route: FernAgentRoute): A
       const href = scope.target
         ? (scoped?.markdownHref ?? scoped?.href)
         : (document.agentLinks.markdown?.href ?? document.pathname);
-      if (href) {
+      if (href)
         lines.push(`- [${page.title}](${routeHref(data, href)}): ${page.httpMethod} - ${summary(page.description)}`);
-      }
     }
     lines.push('', '## Execution targets', '');
     for (const target of snapshot.targets) {

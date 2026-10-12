@@ -14,7 +14,7 @@ const { descriptions } = router;
 const standalone = commands.filter((command) => command.fullPath.length === 1);
 const grouped = new Map<string, CommandMetadata[]>();
 for (const command of commands) {
-  if (command.fullPath.length === 1) {continue;}
+  if (command.fullPath.length === 1) continue;
   const name = command.fullPath[0];
   const group = grouped.get(name) ?? [];
   group.push(command);

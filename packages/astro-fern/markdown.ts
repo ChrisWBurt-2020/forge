@@ -24,19 +24,13 @@ export const sanitizeFernMarkdownPlugin = {
     return { type: 'text', value: node.value };
   },
   link(node, context) {
-    if (hasUnsafeScheme(node.url)) {
-      context.setProperty(node, 'url', '#');
-    }
+    if (hasUnsafeScheme(node.url)) context.setProperty(node, 'url', '#');
   },
   image(node, context) {
-    if (hasUnsafeScheme(node.url)) {
-      context.setProperty(node, 'url', '#');
-    }
+    if (hasUnsafeScheme(node.url)) context.setProperty(node, 'url', '#');
   },
   definition(node, context) {
-    if (hasUnsafeScheme(node.url)) {
-      context.setProperty(node, 'url', '#');
-    }
+    if (hasUnsafeScheme(node.url)) context.setProperty(node, 'url', '#');
   },
 } satisfies MdastPluginDefinition;
 
@@ -46,9 +40,7 @@ function isSatteriProcessor(processor: AstroMarkdownProcessor): processor is Sat
 
 /** Adds the sanitizer to Astro's active Satteri processor without replacing its options. */
 export function installFernMarkdownSanitizer(processor: AstroConfig['markdown']['processor']): boolean {
-  if (!isSatteriProcessor(processor)) {
-    return false;
-  }
+  if (!isSatteriProcessor(processor)) return false;
   if (!processor.options.mdastPlugins.includes(sanitizeFernMarkdownPlugin)) {
     processor.options.mdastPlugins.push(sanitizeFernMarkdownPlugin);
   }

@@ -115,9 +115,7 @@ export function createSnippetProvider(
   return (input: SnippetInput): Snippet[] =>
     ids.map((targetId) => {
       const renderer = renderers[targetId];
-      if (!renderer) {
-        return { targetId, label: targetId, syntax: 'text', code: null };
-      }
+      if (!renderer) return { targetId, label: targetId, syntax: 'text', code: null };
       let code: string | null = null;
       try {
         code = renderer.render(input);
@@ -145,34 +143,16 @@ export function interpolatePath(path: string, replacer: (name: string) => string
 
 /** A representative placeholder value for a parameter, for request samples. */
 export function placeholderValue(p: SnippetParam): unknown {
-  if (p.enumValues && p.enumValues.length > 0) {
-    return p.enumValues[0];
-  }
-  if (p.default !== undefined) {
-    return p.default;
-  }
+  if (p.enumValues && p.enumValues.length > 0) return p.enumValues[0];
+  if (p.default !== undefined) return p.default;
   const variant = p.variants?.[0];
-  if (variant) {
-    return placeholderValue(variant);
-  }
-  if (p.children) {
-    return buildBodyExample(p.children);
-  }
-  if (p.items) {
-    return [placeholderValue(p.items)];
-  }
-  if (p.type === 'object') {
-    return {};
-  }
-  if (p.type === 'array' || p.type.endsWith('[]')) {
-    return [];
-  }
-  if (p.type === 'number' || p.type === 'integer') {
-    return 0;
-  }
-  if (p.type === 'boolean') {
-    return true;
-  }
+  if (variant) return placeholderValue(variant);
+  if (p.children) return buildBodyExample(p.children);
+  if (p.items) return [placeholderValue(p.items)];
+  if (p.type === 'object') return {};
+  if (p.type === 'array' || p.type.endsWith('[]')) return [];
+  if (p.type === 'number' || p.type === 'integer') return 0;
+  if (p.type === 'boolean') return true;
   return `<${p.name || 'value'}>`;
 }
 
@@ -180,16 +160,12 @@ export function placeholderValue(p: SnippetParam): unknown {
 export function buildBodyExample(bodyParams: SnippetParam[]): Record<string, unknown> {
   const root: Record<string, unknown> = {};
   for (const p of bodyParams) {
-    if (!p.required) {
-      continue;
-    }
+    if (!p.required) continue;
     const segs = p.apiFieldPath && p.apiFieldPath.length > 0 ? p.apiFieldPath : [p.name];
     let cursor = root;
     for (let i = 0; i < segs.length - 1; i++) {
       const seg = segs[i];
-      if (!seg) {
-        continue;
-      }
+      if (!seg) continue;
       const existing = cursor[seg];
       const parsed = unknownRecordSchema.safeParse(existing);
       if (parsed.success) {
@@ -202,9 +178,7 @@ export function buildBodyExample(bodyParams: SnippetParam[]): Record<string, unk
       }
     }
     const leaf = segs[segs.length - 1];
-    if (leaf) {
-      cursor[leaf] = placeholderValue(p);
-    }
+    if (leaf) cursor[leaf] = placeholderValue(p);
   }
   return root;
 }

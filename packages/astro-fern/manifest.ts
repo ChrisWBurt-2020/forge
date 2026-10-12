@@ -65,12 +65,8 @@ export interface FernManifest {
 function assertUnique(values: string[], label: string): void {
   const seen = new Set<string>();
   for (const value of values) {
-    if (!value) {
-      throw new Error(`astro-fern: ${label} IDs must not be empty`);
-    }
-    if (seen.has(value)) {
-      throw new Error(`astro-fern: duplicate ${label} ID "${value}"`);
-    }
+    if (!value) throw new Error(`astro-fern: ${label} IDs must not be empty`);
+    if (seen.has(value)) throw new Error(`astro-fern: duplicate ${label} ID "${value}"`);
     seen.add(value);
   }
 }
@@ -90,20 +86,14 @@ function validateTargets(targets: FernTargetConfig[], owner: string): void {
  * identities and OpenAPI tags.
  */
 export function defineFernManifest(manifest: FernManifest): FernManifest {
-  if (manifest.products.length === 0) {
-    throw new Error('astro-fern: the manifest must contain at least one product');
-  }
+  if (manifest.products.length === 0) throw new Error('astro-fern: the manifest must contain at least one product');
   assertUnique(
     manifest.products.map((product) => product.id),
     'product',
   );
-  if (manifest.targets) {
-    validateTargets(manifest.targets, 'manifest');
-  }
+  if (manifest.targets) validateTargets(manifest.targets, 'manifest');
   for (const product of manifest.products) {
-    if (product.targets) {
-      validateTargets(product.targets, `product "${product.id}"`);
-    }
+    if (product.targets) validateTargets(product.targets, `product "${product.id}"`);
     if (product.sdkGroup !== undefined && (!product.sdkGroup.trim() || product.sdkGroup.includes('.'))) {
       throw new Error(
         `astro-fern: product "${product.id}" has invalid Fern SDK group "${product.sdkGroup}" ` +
