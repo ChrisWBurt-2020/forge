@@ -123,6 +123,7 @@ test('drops a referenced example incompatible with an anyOf literal', () => {
     incompatibleExamples: 1,
     undiscriminatedUnionCommonProperties: 0,
     mapArrayValueSchemas: 0,
+    streamingOperations: 0,
   });
   assert.deepEqual(openapi.components?.schemas?.EntityId, {
     type: 'string',
@@ -143,6 +144,7 @@ test('leaves semantically different anyOf examples unchanged', () => {
     incompatibleExamples: 0,
     undiscriminatedUnionCommonProperties: 0,
     mapArrayValueSchemas: 0,
+    streamingOperations: 0,
   });
   const schemas = openapi.components?.schemas;
   assert.ok(schemas);
@@ -157,6 +159,7 @@ test('incompatible example repair is idempotent', () => {
     incompatibleExamples: 0,
     undiscriminatedUnionCommonProperties: 0,
     mapArrayValueSchemas: 0,
+    streamingOperations: 0,
   });
 });
 
@@ -215,6 +218,7 @@ test('undiscriminated oneOf repair is idempotent', () => {
     incompatibleExamples: 0,
     undiscriminatedUnionCommonProperties: 0,
     mapArrayValueSchemas: 0,
+    streamingOperations: 0,
   });
 });
 
@@ -266,5 +270,127 @@ test('map-of-array repair is idempotent', () => {
     incompatibleExamples: 0,
     undiscriminatedUnionCommonProperties: 0,
     mapArrayValueSchemas: 0,
+    streamingOperations: 0,
   });
+});
+
+function addStreamingOperation(
+  openapi: ForgeOpenApiDocument,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const operation: Record<string, unknown> = {
+    operationId: 'createThing',
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              model: { type: 'string' },
+              stream: { type: 'boolean' },
+            },
+          },
+        },
+      },
+    },
+    responses: {
+      '200': {
+        description: 'ok',
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/Thing' } },
+          'text/event-stream': { schema: { type: 'string' } },
+        },
+      },
+    },
+    ...overrides,
+  };
+  (openapi.paths as Record<string, unknown>)['/things'] = { post: operation };
+  (openapi.components!.schemas as Record<string, unknown>)['Thing'] = { type: 'object' };
+  return operation;
+}
+
+test('marks a conditional streaming operation with the stream-condition form', () => {
+  const openapi = fixture();
+  const operation = addStreamingOperation(openapi);
+
+  const fixes = applyFernCompatibilityFixes(openapi);
+
+  assert.equal(fixes.streamingOperations, 1);
+  assert.deepEqual(operation['x-fern-streaming'], {
+    'stream-condition': '$request.stream',
+    response: { $ref: '#/components/schemas/Thing' },
+    'response-stream': { type: 'string' },
+    format: 'sse',
+  });
+});
+
+test('sets the [DONE] terminator when the spec example uses it', () => {
+  const openapi = fixture();
+  const operation = addStreamingOperation(openapi);
+  const content = (operation['responses'] as Record<string, Record<string, Record<string, Record<string, unknown>>>>)[
+    '200'
+  ]!['content']!;
+  content['text/event-stream']!['example'] = 'data: {"id":"1"}\n\ndata: [DONE]\n\n';
+
+  const fixes = applyFernCompatibilityFixes(openapi);
+
+  assert.equal(fixes.streamingOperations, 1);
+  assert.deepEqual(operation['x-fern-streaming'], {
+    'stream-condition': '$request.stream',
+    response: { $ref: '#/components/schemas/Thing' },
+    'response-stream': { type: 'string' },
+    format: 'sse',
+    terminator: '[DONE]',
+  });
+});
+
+test('marks a stream-only operation with unconditional streaming', () => {
+  const openapi = fixture();
+  const operation = addStreamingOperation(openapi, {
+    requestBody: {
+      content: { 'application/json': { schema: { type: 'object', properties: { prompt: { type: 'string' } } } } },
+    },
+    responses: {
+      '200': { description: 'sse', content: { 'text/event-stream': { schema: { type: 'object' } } } },
+    },
+  });
+
+  const fixes = applyFernCompatibilityFixes(openapi);
+
+  assert.equal(fixes.streamingOperations, 1);
+  assert.deepEqual(operation['x-fern-streaming'], { format: 'sse' });
+});
+
+test('leaves a JSON operation without a boolean stream property unmarked', () => {
+  const openapi = fixture();
+  const operation = addStreamingOperation(openapi, {
+    requestBody: {
+      content: { 'application/json': { schema: { type: 'object', properties: { model: { type: 'string' } } } } },
+    },
+  });
+
+  const fixes = applyFernCompatibilityFixes(openapi);
+
+  assert.equal(fixes.streamingOperations, 0);
+  assert.equal(operation['x-fern-streaming'], undefined);
+});
+
+test('leaves an author-supplied x-fern-streaming marker untouched', () => {
+  const openapi = fixture();
+  const existing = { 'stream-condition': '$request.stream', response: {}, 'response-stream': {} };
+  const operation = addStreamingOperation(openapi, { 'x-fern-streaming': existing });
+
+  const fixes = applyFernCompatibilityFixes(openapi);
+
+  assert.equal(fixes.streamingOperations, 0);
+  assert.equal(operation['x-fern-streaming'], existing);
+});
+
+test('streaming marking is idempotent', () => {
+  const openapi = fixture();
+  addStreamingOperation(openapi);
+  applyFernCompatibilityFixes(openapi);
+
+  assert.equal(applyFernCompatibilityFixes(openapi).streamingOperations, 0);
 });

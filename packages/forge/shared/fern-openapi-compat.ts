@@ -8,6 +8,7 @@ export type FernCompatibilityFixes = {
   incompatibleExamples: number;
   undiscriminatedUnionCommonProperties: number;
   mapArrayValueSchemas: number;
+  streamingOperations: number;
 };
 
 const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'] as const;
@@ -389,6 +390,115 @@ function repairMapArrayValueSchemas(document: OpenApiObject): number {
   return repaired;
 }
 
+function isJsonMediaType(mediaType: string): boolean {
+  return mediaType === 'application/json' || mediaType.endsWith('+json');
+}
+
+/**
+ * Mark operations that offer a `text/event-stream` success response for
+ * Fern streaming via `x-fern-streaming`. Without the marker Fern converts
+ * the endpoint as an ordinary JSON call and the streaming surface is lost
+ * (the SSE content is ignored), even when the generator is configured
+ * with a web stream type.
+ *
+ * Two shapes, mirroring how APIs actually stream:
+ *
+ * - The operation also returns JSON and its JSON request schema declares
+ *   a boolean `stream` property (the OpenAI-style conditional pattern):
+ *   emit the object form with `stream-condition: "$request.stream"`, so
+ *   Fern generates a separate `<operation>Stream` method next to the
+ *   regular one. The declared response schemas are reused verbatim —
+ *   a spec that describes its chunks gets typed chunks; a spec that
+ *   declares the stream payload as a string gets a string stream.
+ * - The operation only offers the stream: emit the format-only object
+ *   (unconditional streaming); the generated method returns the stream.
+ *
+ * Both forms set `format: "sse"` — the declared media type IS the
+ * framing; Fern otherwise defaults to line-delimited JSON and the
+ * generated stream parser throws on the first `data:` line. When the
+ * spec's own SSE example uses the `[DONE]` sentinel, `terminator:
+ * "[DONE]"` is set as well: without it the generated parser tries to
+ * JSON-parse the sentinel and throws at end of stream.
+ *
+ * Operations that already carry `x-fern-streaming` are left untouched,
+ * as are JSON operations whose request has no boolean `stream` property
+ * (there is no condition to bind, and replacing their regular method
+ * with a stream would be a behavior change, not a repair).
+ */
+function markStreamingOperations(document: OpenApiObject): number {
+  let marked = 0;
+  forEachOperation(document, (_path, _pathItem, operation) => {
+    if (operation['x-fern-streaming'] !== undefined) return;
+
+    const responses = child(operation, 'responses');
+    if (!responses) return;
+
+    let streamSchema: unknown;
+    let hasStream = false;
+    let streamTerminator: string | undefined;
+    let jsonSchema: unknown;
+    let hasJson = false;
+    for (const status of Object.keys(responses)) {
+      if (!/^2\d\d$/.test(status)) continue;
+      const response = resolveLocalRef(document, responses[status]);
+      const content = child(response, 'content');
+      if (!content) continue;
+      for (const [mediaType, mediaValue] of Object.entries(content)) {
+        const media = isRecord(mediaValue) ? mediaValue : undefined;
+        if (!media) continue;
+        if (mediaType === 'text/event-stream') {
+          hasStream = true;
+          streamSchema = media['schema'] ?? { type: 'string' };
+          const exampleText = JSON.stringify(
+            media['example'] ?? media['examples'] ?? child(media, 'schema')?.['example'] ?? '',
+          );
+          if (exampleText.includes('[DONE]')) streamTerminator = '[DONE]';
+        } else if (isJsonMediaType(mediaType)) {
+          hasJson = true;
+          jsonSchema = media['schema'];
+        }
+      }
+    }
+    if (!hasStream) return;
+
+    if (!hasJson) {
+      operation['x-fern-streaming'] = {
+        format: 'sse',
+        ...(streamTerminator !== undefined ? { terminator: streamTerminator } : {}),
+      };
+      marked++;
+      return;
+    }
+
+    // Conditional form needs both a JSON response schema to fall back to
+    // and a boolean `stream` request property to bind the condition to.
+    if (jsonSchema === undefined) return;
+    const requestBody = resolveLocalRef(document, operation['requestBody']);
+    const requestContent = child(requestBody, 'content');
+    if (!requestContent) return;
+    let hasStreamFlag = false;
+    for (const [mediaType, mediaValue] of Object.entries(requestContent)) {
+      if (!isJsonMediaType(mediaType)) continue;
+      const media = isRecord(mediaValue) ? mediaValue : undefined;
+      const schema = resolveLocalRef(document, media?.['schema']);
+      const properties = child(schema, 'properties');
+      const streamProperty = resolveLocalRef(document, properties?.['stream']);
+      if (streamProperty?.['type'] === 'boolean') hasStreamFlag = true;
+    }
+    if (!hasStreamFlag) return;
+
+    operation['x-fern-streaming'] = {
+      'stream-condition': '$request.stream',
+      response: jsonSchema,
+      'response-stream': streamSchema,
+      format: 'sse',
+      ...(streamTerminator !== undefined ? { terminator: streamTerminator } : {}),
+    };
+    marked++;
+  });
+  return marked;
+}
+
 /** Repair narrowly shaped OpenAPI constructs that Fern 5.68 cannot convert. */
 export function applyFernCompatibilityFixes(openapi: object): FernCompatibilityFixes {
   const document = openapi as unknown as OpenApiObject;
@@ -396,5 +506,6 @@ export function applyFernCompatibilityFixes(openapi: object): FernCompatibilityF
     incompatibleExamples: repairIncompatibleParameterExamples(document),
     undiscriminatedUnionCommonProperties: repairUndiscriminatedUnionCommonProperties(document),
     mapArrayValueSchemas: repairMapArrayValueSchemas(document),
+    streamingOperations: markStreamingOperations(document),
   };
 }
