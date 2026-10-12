@@ -431,6 +431,14 @@ function preferEndpoint(a: Endpoint, b: Endpoint): Endpoint {
   return a.method.localeCompare(b.method) <= 0 ? a : b;
 }
 
+// The API namespace re-exported from the generated index (`export * as X from
+// "./api/index.js"`). Its name is derived from the Fern organization, so it is
+// read from the generated source rather than assumed to be CloudflareApi.
+function apiNamespaceName(): string {
+  const index = readFileSync(GENERATED_INDEX, 'utf8');
+  return /export \* as (\w+) from "\.\/api\/index\.js"/.exec(index)?.[1] ?? 'CloudflareApi';
+}
+
 function emitOperationTypes(chosen: Map<string, Endpoint>): void {
   const operations = [...chosen.entries()]
     .filter((entry): entry is [string, Endpoint & { requestTypeExpression: string }] => {
@@ -439,7 +447,7 @@ function emitOperationTypes(chosen: Map<string, Endpoint>): void {
     .sort(([a], [b]) => a.localeCompare(b));
   const queryOperations = operations.filter(([, endpoint]) => (endpoint.queryProperties?.length ?? 0) > 0);
   const lines = [
-    "import type { CloudflareApi } from './index.js';",
+    `import type { ${apiNamespaceName()} } from './index.js';`,
     '',
     '/** Request types keyed by the OpenAPI operationId used to generate them. */',
     'export interface SdkOperationRequestMap {',

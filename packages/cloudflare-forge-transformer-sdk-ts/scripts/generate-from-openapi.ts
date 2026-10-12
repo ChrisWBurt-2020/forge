@@ -220,22 +220,37 @@ function renameGeneratedClient(generated: string, clientName: string): number {
   const clientSource = readFileSync(join(generated, 'Client.ts'), 'utf8');
   const derived = /export class (\w+)Client/.exec(clientSource);
   if (!derived?.[1]) throw new Error('could not find the generated root client class in Client.ts');
-  const sourceBase = derived[1];
-  if (sourceBase === targetBase) return 0;
+  // The derived base, plus the canonical CloudflareApi base: Cloudflare-specific
+  // overlays installed after generation (the custom fetcher runtime, the
+  // sdk-map emitter) can carry the literal base even when --organization
+  // changed the derived one. --client-name is authoritative for the output,
+  // so both are swept. Longest first so a derived base containing the literal
+  // is consumed whole.
+  const sourceBases = [...new Set([derived[1], 'CloudflareApi'])].sort((a, b) => b.length - a.length);
+  if (sourceBases.every((base) => base === targetBase)) return 0;
   let replacements = 0;
   const renames: Array<[string, string]> = [];
   for (const path of walkFiles(generated)) {
     if (RENAMABLE_EXTENSIONS.has(path.slice(path.lastIndexOf('.')))) {
-      const content = readFileSync(path, 'utf8');
-      if (content.includes(sourceBase)) {
-        writeFileSync(path, content.split(sourceBase).join(targetBase));
+      let content = readFileSync(path, 'utf8');
+      let changed = false;
+      for (const sourceBase of sourceBases) {
+        if (sourceBase !== targetBase && content.includes(sourceBase)) {
+          content = content.split(sourceBase).join(targetBase);
+          changed = true;
+        }
+      }
+      if (changed) {
+        writeFileSync(path, content);
         replacements += 1;
       }
     }
     const base = path.slice(path.lastIndexOf('/') + 1);
-    if (base.includes(sourceBase)) {
-      renames.push([path, join(dirname(path), base.split(sourceBase).join(targetBase))]);
+    let renamed = base;
+    for (const sourceBase of sourceBases) {
+      if (sourceBase !== targetBase) renamed = renamed.split(sourceBase).join(targetBase);
     }
+    if (renamed !== base) renames.push([path, join(dirname(path), renamed)]);
   }
   for (const [from, to] of renames) renameSync(from, to);
   return replacements;
