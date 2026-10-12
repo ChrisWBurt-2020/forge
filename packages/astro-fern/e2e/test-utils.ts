@@ -48,7 +48,9 @@ export class AstroPage {
 
   resolveUrl(pathname: string) {
     const address = this.server.address;
-    if (!isAddressInfo(address)) throw new Error('astro-fern e2e: failed to resolve the fixture server address');
+    if (!isAddressInfo(address)) {
+      throw new Error('astro-fern e2e: failed to resolve the fixture server address');
+    }
     return `http://localhost:${address.port}${pathname.replace(/^\/?/, '/')}`;
   }
 }

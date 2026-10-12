@@ -10,3 +10,20 @@ dist/
 openapi.json
 openapi.*.json
 **/openapi.forge.json
+
+# Build output. Every member of the workspace builds into the target
+# directory at its root.
+/target
+
+# Backups left by rustfmt.
+**/*.rs.bk
+
+# Debug information from MSVC builds on Windows.
+*.pdb
+
+# Coverage profiles from -C instrument-coverage.
+*.profraw
+*.profdata
+
+# Mutation testing results from cargo-mutants.
+/mutants.out*/

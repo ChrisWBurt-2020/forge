@@ -1,0 +1,89 @@
+name: Rust
+
+on:
+  pull_request:
+    branches: [main, feat/*]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rustfmt.toml'
+      - 'src/**'
+      - 'tests/**'
+      - 'benches/**'
+      - '.github/workflows/rust.yml'
+  push:
+    branches: [main, feat/*]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rustfmt.toml'
+      - 'src/**'
+      - 'tests/**'
+      - 'benches/**'
+      - '.github/workflows/rust.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --component rustfmt && rustup default stable
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      # The wasm guest is its own workspace, so the root `cargo fmt` skips it.
+      - name: Check formatting of the wasm guest
+        run: cargo fmt --check --manifest-path tests/wasm/ts/Cargo.toml
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+
+      - uses: Swatinem/rust-cache@v2.9.2
+
+      - name: Clippy (all features)
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
+      # The library on its own, as users with `default-features = false` build it.
+      - name: Clippy (no default features)
+        run: cargo clippy --locked --all-targets --no-default-features -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      # tests/wasm.rs builds the guest in tests/wasm/ts for wasm32-wasip2.
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --target wasm32-wasip2 && rustup default stable
+
+      - uses: Swatinem/rust-cache@v2.9.2
+
+      - name: Test
+        run: cargo test --locked --all-features

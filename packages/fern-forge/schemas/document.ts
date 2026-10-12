@@ -75,9 +75,13 @@ export function hoistForgeCommands(document: unknown): ForgeDocumentSchema {
   let paths: NonNullable<ForgeDocumentSchema['paths']> | undefined;
 
   for (const [path, pathItem] of Object.entries(source.paths ?? {})) {
-    if (!pathItem) continue;
+    if (!pathItem) {
+      continue;
+    }
     const value = pathItem['x-forge-commands'];
-    if (value === undefined) continue;
+    if (value === undefined) {
+      continue;
+    }
     const nested = commandsSchema.parse(value);
     for (const command of Object.keys(nested)) {
       if (commands[command] !== undefined) {

@@ -76,10 +76,14 @@ export function prepareForge(
   const missingMethod: string[] = [];
   const excluded: Array<{ operationId: string; fields: string[] }> = [];
   for (const [path, pathItem] of Object.entries(document.paths ?? {})) {
-    if (pathItem === undefined) continue;
+    if (pathItem === undefined) {
+      continue;
+    }
     for (const method of HTTP_METHODS) {
       const operation = pathItem[method];
-      if (!operation) continue;
+      if (!operation) {
+        continue;
+      }
       const operationId = operation.operationId ?? `${method.toUpperCase()} ${path}`;
       const removedFields = removedForgeOperationFields(operation);
       if (removedFields.length > 0) {
@@ -89,18 +93,26 @@ export function prepareForge(
       const hasAliases = operation['x-forge-aliases'] !== undefined;
       const hasPrimaryMetadata = OPERATION_PROJECTION_KEYS.some((key) => operation[key] !== undefined);
       if (!hasAliases || hasPrimaryMetadata) {
-        if (operation['x-fern-sdk-group-name'] === undefined) missingGroup.push(operationId);
-        if (operation['x-fern-sdk-method-name'] === undefined) missingMethod.push(operationId);
+        if (operation['x-fern-sdk-group-name'] === undefined) {
+          missingGroup.push(operationId);
+        }
+        if (operation['x-fern-sdk-method-name'] === undefined) {
+          missingMethod.push(operationId);
+        }
       }
       try {
         const parsed = parseOperation(operation);
-        if (parsed.primary || parsed.aliases.length > 0) operations.set(operation, parsed);
+        if (parsed.primary || parsed.aliases.length > 0) {
+          operations.set(operation, parsed);
+        }
       } catch (error) {
         errors.push(`operation "${operationId}": ${error instanceof Error ? error.message : String(error)}`);
       }
     }
   }
-  if (errors.length > 0) throw new Error(`fern-forge: invalid OpenAPI extensions:\n- ${errors.join('\n- ')}`);
+  if (errors.length > 0) {
+    throw new Error(`fern-forge: invalid OpenAPI extensions:\n- ${errors.join('\n- ')}`);
+  }
   if (excluded.length > 0) {
     const fields = [...new Set(excluded.flatMap((entry) => entry.fields))].sort().join(', ');
     const examples = excluded
@@ -117,7 +129,9 @@ export function prepareForge(
 }
 
 function warnMissingRequiredField(logger: FernExtensionLogger, field: string, operationIds: string[]): void {
-  if (operationIds.length === 0) return;
+  if (operationIds.length === 0) {
+    return;
+  }
   const examples = operationIds
     .slice(0, 3)
     .map((operationId) => `"${operationId}"`)

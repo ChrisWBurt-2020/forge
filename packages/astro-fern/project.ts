@@ -161,7 +161,9 @@ function resolveSnapshots(source: FernProjectSource): {
 
     const targetIds = new Set<string>();
     for (const target of snapshot.targets ?? []) {
-      if (!target.id) throw new Error(`astro-fern: snapshot "${snapshot.id}" target IDs must not be empty`);
+      if (!target.id) {
+        throw new Error(`astro-fern: snapshot "${snapshot.id}" target IDs must not be empty`);
+      }
       if (targetIds.has(target.id)) {
         throw new Error(`astro-fern: duplicate snapshot "${snapshot.id}" target ID "${target.id}"`);
       }
@@ -202,7 +204,9 @@ export interface FernProjectBuildContext {
 export function isFernSnapshotSources<TSource>(
   source: TSource | FernSnapshotSources<TSource>,
 ): source is FernSnapshotSources<TSource> {
-  if (!source || typeof source !== 'object') return false;
+  if (!source || typeof source !== 'object') {
+    return false;
+  }
   const candidate = source as Partial<FernSnapshotSources<TSource>>;
   return candidate.kind === 'snapshots' && Array.isArray(candidate.snapshots);
 }
@@ -271,7 +275,9 @@ export function buildFernContent(
     ),
   }));
   const defaultGroup = groups.find((group) => group.snapshot.default);
-  if (!defaultGroup) throw new Error('astro-fern: resolved snapshot set has no default');
+  if (!defaultGroup) {
+    throw new Error('astro-fern: resolved snapshot set has no default');
+  }
 
   const manifest = defineFernManifest(
     typeof options.manifest === 'function'
@@ -310,12 +316,18 @@ export function buildFernContent(
       },
       group.prepared.extensions,
     );
-    for (const section of result.matchedSections) matchedSections.add(section);
-    if (group.snapshot.default) description = result.model.description;
+    for (const section of result.matchedSections) {
+      matchedSections.add(section);
+    }
+    if (group.snapshot.default) {
+      description = result.model.description;
+    }
 
     for (const productConfig of manifest.products) {
       const modelProduct = result.model.products.find((product) => product.name === productConfig.id);
-      if (!modelProduct) continue;
+      if (!modelProduct) {
+        continue;
+      }
       const title = productConfig.title ?? modelProduct.title;
       const productDescription = productConfig.description ?? modelProduct.description;
       const productSlug = modelProduct.slug;

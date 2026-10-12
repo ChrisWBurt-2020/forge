@@ -40,8 +40,8 @@ function expansionOf(n: RenderedSchemaNodeSchema): Expansion | null {
 
 /** Requirement badge, context-aware. Responses never show "required". */
 function requirement(n: RenderedSchemaNodeSchema): { text: string; cls: string } | null {
-  if (!n.name) return null;
-  if (context === 'response') return n.required ? null : { text: 'optional', cls: 'forge-optional' };
+  if (!n.name) {return null;}
+  if (context === 'response') {return n.required ? null : { text: 'optional', cls: 'forge-optional' };}
   return n.required ? { text: 'required', cls: 'forge-required' } : { text: 'optional', cls: 'forge-optional' };
 }
 ---

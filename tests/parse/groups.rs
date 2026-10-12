@@ -1,0 +1,430 @@
+use forge::{Group, Name};
+
+use crate::common::{group, method, parse, parse_err};
+
+#[test]
+fn string_group_name_splits_on_dots() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "accounts.members", "x-fern-sdk-method-name": "list",
+            "responses": {"204": {"description": "ok"}}}}}
+        }"#,
+    );
+
+    let members = group(&forge, "accounts.members");
+    assert_eq!(members.parent(), Some(group(&forge, "accounts")));
+}
+
+#[test]
+fn array_group_name_has_a_group_per_element() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": ["accounts", "members"], "x-fern-sdk-method-name": "list",
+            "responses": {"204": {"description": "ok"}}}}}
+        }"#,
+    );
+
+    let members = group(&forge, "accounts.members");
+    assert_eq!(members.parent(), Some(group(&forge, "accounts")));
+}
+
+#[test]
+fn array_element_with_a_dot_is_one_group() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": ["zones.settings"], "x-fern-sdk-method-name": "get",
+            "responses": {"204": {"description": "ok"}}}}}
+        }"#,
+    );
+
+    let groups: Vec<Group> = forge.groups().collect();
+    let [settings] = groups[..] else {
+        panic!("want one group, got {groups:?}");
+    };
+    assert_eq!(settings.name(), &Name::new("zones.settings"));
+    assert_eq!(settings.parent(), None);
+}
+
+#[test]
+fn groups_with_equal_names_are_one_group() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {
+            "/a": {"get": {"x-fern-sdk-group-name": "abuse-reports", "x-fern-sdk-method-name": "list",
+              "responses": {"204": {"description": "ok"}}}},
+            "/b": {"get": {"x-fern-sdk-group-name": ["abuse_reports"], "x-fern-sdk-method-name": "get",
+              "responses": {"204": {"description": "ok"}}}}
+          }
+        }"#,
+    );
+
+    assert_eq!(forge.groups().count(), 1);
+    assert_eq!(group(&forge, "abuse_reports").methods().len(), 2);
+}
+
+#[test]
+fn subgroup_and_method_can_share_a_name() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {
+            "/a": {"delete": {"x-fern-sdk-group-name": "members", "x-fern-sdk-method-name": "delete",
+              "responses": {"204": {"description": "ok"}}}},
+            "/b": {"post": {"x-fern-sdk-group-name": "members.delete", "x-fern-sdk-method-name": "bulk",
+              "responses": {"204": {"description": "ok"}}}}
+          }
+        }"#,
+    );
+
+    method(&forge, "members.delete");
+    method(&forge, "members.delete.bulk");
+}
+
+#[test]
+fn operation_without_a_group_is_not_a_method() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-method-name": "get",
+            "responses": {"204": {"description": "ok"}}}}}
+        }"#,
+    );
+
+    assert_eq!(forge.groups().count(), 0);
+}
+
+#[test]
+fn empty_group_name_is_no_group() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "", "x-fern-sdk-method-name": "get",
+            "responses": {"204": {"description": "ok"}}}}}
+        }"#,
+    );
+
+    assert_eq!(forge.groups().count(), 0);
+}
+
+#[test]
+fn operation_without_a_method_name_is_not_a_method() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "a",
+            "responses": {"204": {"description": "ok"}}}}}
+        }"#,
+    );
+
+    assert_eq!(forge.groups().count(), 0);
+}
+
+#[test]
+fn empty_method_name_is_not_a_method() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "",
+            "responses": {"204": {"description": "ok"}}}}}
+        }"#,
+    );
+
+    assert_eq!(forge.groups().count(), 0);
+}
+
+#[test]
+fn ignored_operation_is_not_a_method() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {
+            "get": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "list",
+              "responses": {"204": {"description": "ok"}}},
+            "post": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "create", "x-fern-ignore": true,
+              "responses": {"204": {"description": "ok"}}}
+          }}
+        }"#,
+    );
+
+    let names: Vec<&Name> = group(&forge, "a").methods().map(|method| method.name()).collect();
+    assert_eq!(names, [&Name::new("list")]);
+}
+
+#[test]
+fn group_name_without_letters_is_an_error() {
+    let err = parse_err(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "accounts..members", "x-fern-sdk-method-name": "list",
+            "responses": {"204": {"description": "ok"}}}}}
+        }"#,
+    );
+
+    assert!(err.contains("GET /a"), "{err}");
+}
+
+#[test]
+fn duplicate_method_in_a_group_is_an_error() {
+    let err = parse_err(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {
+            "/a": {"get": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "list",
+              "responses": {"204": {"description": "ok"}}}},
+            "/b": {"get": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "list",
+              "responses": {"204": {"description": "ok"}}}}
+          }
+        }"#,
+    );
+
+    assert!(err.contains("GET /a") && err.contains("GET /b"), "{err}");
+}
+
+#[test]
+fn method_names_are_equal_as_names() {
+    let err = parse_err(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {
+            "/a": {"get": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "list_all",
+              "responses": {"204": {"description": "ok"}}}},
+            "/b": {"get": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "listAll",
+              "responses": {"204": {"description": "ok"}}}}
+          }
+        }"#,
+    );
+
+    assert!(err.contains("GET /a") && err.contains("GET /b"), "{err}");
+}
+
+#[test]
+fn groups_are_depth_first() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {
+            "/a": {"get": {"x-fern-sdk-group-name": "a.b.c", "x-fern-sdk-method-name": "get",
+              "responses": {"204": {"description": "ok"}}}},
+            "/b": {"get": {"x-fern-sdk-group-name": "x", "x-fern-sdk-method-name": "get",
+              "responses": {"204": {"description": "ok"}}}},
+            "/c": {"get": {"x-fern-sdk-group-name": "a.d", "x-fern-sdk-method-name": "get",
+              "responses": {"204": {"description": "ok"}}}}
+          }
+        }"#,
+    );
+
+    // Each group is followed by everything below it, whatever the order of
+    // siblings.
+    let groups: Vec<Group> = forge.groups().collect();
+    assert_eq!(groups.len(), 5);
+    for (i, group) in groups.iter().enumerate() {
+        let below = group.descendants().count();
+        for after in &groups[i + 1..i + 1 + below] {
+            assert!(
+                iter_parents(*after).any(|parent| parent == *group),
+                "{after:?} follows {group:?} but is not below it, in {groups:?}"
+            );
+        }
+    }
+}
+
+fn iter_parents(group: Group<'_>) -> impl Iterator<Item = Group<'_>> {
+    std::iter::successors(group.parent(), |group| group.parent())
+}
+
+#[test]
+fn group_description_comes_from_x_forge_commands() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "accounts", "x-fern-sdk-method-name": "list",
+            "responses": {"204": {"description": "ok"}}}}},
+          "x-forge-commands": {"accounts": {"description": "Accounts."}}
+        }"#,
+    );
+
+    assert_eq!(group(&forge, "accounts").description(), "Accounts.");
+}
+
+#[test]
+fn subgroup_description_is_in_its_parents_command() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "accounts.members", "x-fern-sdk-method-name": "list",
+            "responses": {"204": {"description": "ok"}}}}},
+          "x-forge-commands": {"accounts": {"groups": {"members": {"description": "Members."}}}}
+        }"#,
+    );
+
+    assert_eq!(group(&forge, "accounts.members").description(), "Members.");
+}
+
+/// A document with a method in each of `groups`, and `commands` as its
+/// `x-forge-commands`.
+fn with_commands(groups: &[&str], commands: &str) -> String {
+    let paths: Vec<String> = groups
+        .iter()
+        .enumerate()
+        .map(|(i, group)| {
+            format!(
+                r#""/{i}": {{"get": {{"x-fern-sdk-group-name": "{group}", "x-fern-sdk-method-name": "list",
+                  "responses": {{"204": {{"description": "ok"}}}}}}}}"#
+            )
+        })
+        .collect();
+    format!(
+        r#"{{"openapi": "3.0.3", "info": {{"title": "t", "version": "1"}},
+          "paths": {{{}}}, "x-forge-commands": {commands}}}"#,
+        paths.join(", ")
+    )
+}
+
+#[test]
+fn dotted_group_key_describes_a_subgroup() {
+    let forge = parse(&with_commands(
+        &["ai.dynamic-routing.deployments", "ai.dynamic-routing"],
+        r#"{"ai": {"groups": {
+          "dynamic-routing": {"description": "Routes."},
+          "dynamic-routing.deployments": {"description": "Deployments."}}}}"#,
+    ));
+
+    assert_eq!(group(&forge, "ai.dynamic_routing").description(), "Routes.");
+    assert_eq!(
+        group(&forge, "ai.dynamic_routing.deployments").description(),
+        "Deployments."
+    );
+}
+
+#[test]
+fn dotted_root_key_describes_a_subgroup() {
+    let forge = parse(&with_commands(
+        &["user.analytics"],
+        r#"{"user.analytics": {"description": "Analytics."}}"#,
+    ));
+
+    assert_eq!(group(&forge, "user").description(), "");
+    assert_eq!(group(&forge, "user.analytics").description(), "Analytics.");
+}
+
+#[test]
+fn dotted_key_can_come_before_its_parents_entry() {
+    let forge = parse(&with_commands(
+        &["a.b.c", "a.b", "a"],
+        r#"{"a.b.c": {"description": "C."}, "a": {"description": "A.", "groups": {"b": {"description": "B."}}}}"#,
+    ));
+
+    assert_eq!(group(&forge, "a").description(), "A.");
+    assert_eq!(group(&forge, "a.b").description(), "B.");
+    assert_eq!(group(&forge, "a.b.c").description(), "C.");
+}
+
+#[test]
+fn dotted_and_nested_entries_for_a_group_are_an_error() {
+    let err = parse_err(&with_commands(
+        &["a.b"],
+        r#"{"a": {"groups": {"b": {"description": "One."}}}, "a.b": {"description": "Two."}}"#,
+    ));
+
+    assert!(
+        err.contains(r#"two entries in x-forge-commands have the name "b""#),
+        "{err}"
+    );
+}
+
+#[test]
+fn command_matches_a_group_with_an_equal_name() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "abuse_reports", "x-fern-sdk-method-name": "list",
+            "responses": {"204": {"description": "ok"}}}}},
+          "x-forge-commands": {"abuse-reports": {"description": "Abuse reports."}}
+        }"#,
+    );
+
+    assert_eq!(group(&forge, "abuse_reports").description(), "Abuse reports.");
+}
+
+#[test]
+fn group_without_a_command_has_no_description() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {"get": {"x-fern-sdk-group-name": "accounts", "x-fern-sdk-method-name": "list",
+            "responses": {"204": {"description": "ok"}}}}},
+          "x-forge-commands": {"zones": {"description": "Zones."}}
+        }"#,
+    );
+
+    assert_eq!(group(&forge, "accounts").description(), "");
+    assert_eq!(forge.groups().count(), 1);
+}
+
+#[test]
+fn commands_with_equal_names_are_an_error() {
+    let err = parse_err(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {},
+          "x-forge-commands": {"abuse-reports": {"description": "One."}, "abuse_reports": {"description": "Two."}}
+        }"#,
+    );
+
+    assert!(err.contains("x-forge-commands"), "{err}");
+}
+
+#[test]
+fn groups_are_sorted_by_name() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {
+            "/a": {"get": {"x-fern-sdk-group-name": "zones", "x-fern-sdk-method-name": "get",
+              "responses": {"204": {"description": "ok"}}}},
+            "/b": {"get": {"x-fern-sdk-group-name": "accounts.members", "x-fern-sdk-method-name": "get",
+              "responses": {"204": {"description": "ok"}}}},
+            "/c": {"get": {"x-fern-sdk-group-name": "dns", "x-fern-sdk-method-name": "get",
+              "responses": {"204": {"description": "ok"}}}},
+            "/d": {"get": {"x-fern-sdk-group-name": "accounts.billing", "x-fern-sdk-method-name": "get",
+              "responses": {"204": {"description": "ok"}}}}
+          }
+        }"#,
+    );
+
+    let paths: Vec<String> = forge
+        .groups()
+        .map(|group| group.path().map(Name::snake).collect::<Vec<_>>().join("."))
+        .collect();
+    assert_eq!(
+        paths,
+        ["accounts", "accounts.billing", "accounts.members", "dns", "zones"]
+    );
+}
+
+#[test]
+fn methods_are_sorted_by_name() {
+    let forge = parse(
+        r#"{
+          "openapi": "3.0.3", "info": {"title": "t", "version": "1"},
+          "paths": {"/a": {
+            "get": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "list",
+              "responses": {"204": {"description": "ok"}}},
+            "post": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "create",
+              "responses": {"204": {"description": "ok"}}},
+            "delete": {"x-fern-sdk-group-name": "a", "x-fern-sdk-method-name": "delete",
+              "responses": {"204": {"description": "ok"}}}
+          }}
+        }"#,
+    );
+
+    let names: Vec<String> = group(&forge, "a")
+        .methods()
+        .map(|method| method.name().snake())
+        .collect();
+    assert_eq!(names, ["create", "delete", "list"]);
+}

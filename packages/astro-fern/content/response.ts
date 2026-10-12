@@ -5,11 +5,21 @@ export type ResponseCategory = 'informational' | 'success' | 'redirect' | 'clien
 
 /** Classifies concrete and wildcard OpenAPI response statuses. */
 export function classifyResponseStatus(status: string): ResponseCategory {
-  if (/^1(?:\d{2}|xx)$/i.test(status)) return 'informational';
-  if (/^2(?:\d{2}|xx)$/i.test(status)) return 'success';
-  if (/^3(?:\d{2}|xx)$/i.test(status)) return 'redirect';
-  if (/^4(?:\d{2}|xx)$/i.test(status)) return 'client-error';
-  if (/^5(?:\d{2}|xx)$/i.test(status)) return 'server-error';
+  if (/^1(?:\d{2}|xx)$/i.test(status)) {
+    return 'informational';
+  }
+  if (/^2(?:\d{2}|xx)$/i.test(status)) {
+    return 'success';
+  }
+  if (/^3(?:\d{2}|xx)$/i.test(status)) {
+    return 'redirect';
+  }
+  if (/^4(?:\d{2}|xx)$/i.test(status)) {
+    return 'client-error';
+  }
+  if (/^5(?:\d{2}|xx)$/i.test(status)) {
+    return 'server-error';
+  }
   return 'default';
 }
 
@@ -56,7 +66,9 @@ export function responsePayloadSchema<T extends PayloadSchemaNode<T>>(representa
   payloadKey?: string | undefined;
 }): ResponsePayloadSchema<T> {
   const root = representation.schema;
-  if (!root) return { schema: null, isArray: false };
+  if (!root) {
+    return { schema: null, isArray: false };
+  }
   const payload = representation.payloadKey
     ? (root.children?.find(({ name }) => name === representation.payloadKey) ?? root)
     : root;

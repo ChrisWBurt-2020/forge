@@ -13,7 +13,9 @@ export interface RemoteCommandCatalogOptions {
 }
 
 async function readBoundedBody(response: Response, maxResponseBytes: number): Promise<string> {
-  if (!response.body) return '';
+  if (!response.body) {
+    return '';
+  }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let bytes = 0;
@@ -21,7 +23,9 @@ async function readBoundedBody(response: Response, maxResponseBytes: number): Pr
 
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
+    if (done) {
+      break;
+    }
     bytes += value.byteLength;
     if (bytes > maxResponseBytes) {
       await reader.cancel();
@@ -40,7 +44,9 @@ export function remoteCommandCatalogSource(
   options: RemoteCommandCatalogOptions = {},
 ) {
   const endpoint = new URL(url);
-  if (endpoint.protocol !== 'https:') throw new Error('Command catalog endpoints must use HTTPS');
+  if (endpoint.protocol !== 'https:') {
+    throw new Error('Command catalog endpoints must use HTTPS');
+  }
   const maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   if (!Number.isSafeInteger(maxResponseBytes) || maxResponseBytes <= 0) {

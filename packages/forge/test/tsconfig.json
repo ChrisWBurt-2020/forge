@@ -1,0 +1,13 @@
+{
+  // Type-checks test/types.ts against the built plugin/ts.d.ts.
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "es2022",
+    "lib": ["es2022"],
+    "types": [],
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
+  },
+  "files": ["types.ts"]
+}

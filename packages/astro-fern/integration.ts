@@ -48,7 +48,9 @@ export default function astroFern(options: AstroFernIntegrationOptions): AstroIn
         addMiddleware({ order: 'pre', entrypoint: new URL('./middleware.ts', import.meta.url) });
 
         const { agents, routing } = runtime;
-        if (!agents.injectRoutes) return;
+        if (!agents.injectRoutes) {
+          return;
+        }
         const scopes = agents.llms === false ? [] : agents.llms.scopes;
         // Site-wide index lives at the root; scoped indexes (product/snapshot/target)
         // share one catch-all under the base — `[...scope]` captures the full tail.
@@ -90,13 +92,17 @@ export default function astroFern(options: AstroFernIntegrationOptions): AstroIn
       },
       'astro:server:setup': ({ logger, server }) => {
         const markedServer = server as typeof server & { __astroFernContentReloadWatcher?: true };
-        if (markedServer.__astroFernContentReloadWatcher) return;
+        if (markedServer.__astroFernContentReloadWatcher) {
+          return;
+        }
         markedServer.__astroFernContentReloadWatcher = true;
         server.watcher.add([...contentReloadFiles, ...contentReloadDirectories]);
 
         let restartTimer: ReturnType<typeof setTimeout> | undefined;
         server.watcher.on('change', (changedPath) => {
-          if (!reloadsFernContent(changedPath)) return;
+          if (!reloadsFernContent(changedPath)) {
+            return;
+          }
           clearTimeout(restartTimer);
           restartTimer = setTimeout(() => {
             logger.info('Content pipeline changed; reloading generated API content.');

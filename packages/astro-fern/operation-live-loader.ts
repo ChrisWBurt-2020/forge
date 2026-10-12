@@ -52,7 +52,9 @@ export function fernOperationLiveLoader(): LiveLoader<FernContentOperationEntryS
       }
       const request = new Request(url, { headers: { Accept: 'application/json' } });
       const response = await (filter.fetcher ? filter.fetcher.fetch(request) : fetch(request));
-      if (response.status === 404) return undefined;
+      if (response.status === 404) {
+        return undefined;
+      }
       if (!response.ok) {
         return { error: operationError(filter.id, `could not be loaded (${response.status} ${response.statusText})`) };
       }

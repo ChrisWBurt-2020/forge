@@ -11,7 +11,7 @@ API documentation site for Forge OpenAPI specs, built on Astro.
 ## Conventions
 
 - **Open Source Separation**: Generic packages (`astro-fern`, `fern-forge`) must remain free of Cloudflare-specific dependencies.
-- **Formatting & Linting**: `oxfmt` and `oxlint` via `pnpm check`.
+- **Formatting & Linting**: `oxfmt` and `oxlint`, configured only at the root (`.oxfmtrc.json`, `.oxlintrc.json`). `pnpm check` verifies; `pnpm format` rewrites.
 - **Type Checking**: Strict TypeScript compiler settings across all packages via `pnpm typecheck`.
 - **Tests**: Node-native test runner via `pnpm test` (or `pnpm -r run test`).
 

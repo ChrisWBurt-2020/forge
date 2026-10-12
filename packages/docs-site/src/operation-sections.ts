@@ -41,9 +41,15 @@ export interface OperationView {
  * "one of N" framing above them.
  */
 export function topLevelNodes(node: RenderedSchemaNodeSchema | null): RenderedSchemaNodeSchema[] {
-  if (!node) return [];
-  if (node.children && node.children.length > 0) return node.children;
-  if (node.variants && node.variants.length > 0) return node.variants;
+  if (!node) {
+    return [];
+  }
+  if (node.children && node.children.length > 0) {
+    return node.children;
+  }
+  if (node.variants && node.variants.length > 0) {
+    return node.variants;
+  }
   return [node];
 }
 
@@ -53,15 +59,21 @@ export function topLevelNodes(node: RenderedSchemaNodeSchema | null): RenderedSc
  * returns null for a plain object/scalar root, whose fields speak for themselves.
  */
 export function responseSummary(node: RenderedSchemaNodeSchema | null, isArray: boolean): string | null {
-  if (!node) return null;
+  if (!node) {
+    return null;
+  }
   const variantCount = node.variants?.length ?? 0;
   const isUnion = variantCount > 0 && !(node.children && node.children.length > 0);
   if (isArray) {
-    if (isUnion) return `Array — each item is one of ${variantCount} variants:`;
+    if (isUnion) {
+      return `Array — each item is one of ${variantCount} variants:`;
+    }
     const t = cleanTypeName(node.type);
     return t === 'unknown' ? 'Array' : `Array of ${t}`;
   }
-  if (isUnion) return `One of ${variantCount} variants:`;
+  if (isUnion) {
+    return `One of ${variantCount} variants:`;
+  }
   return null;
 }
 
@@ -74,7 +86,9 @@ export function responseSummary(node: RenderedSchemaNodeSchema | null, isArray: 
  */
 export function fieldTypeLabel(n: RenderedSchemaNodeSchema): string | null {
   const variants = n.variants ?? n.items?.variants;
-  if (variants && variants.length > 0) return `one of ${variants.length} variants`;
+  if (variants && variants.length > 0) {
+    return `one of ${variants.length} variants`;
+  }
   const t = cleanTypeName(n.type);
   return t === 'unknown' ? null : t;
 }
@@ -84,7 +98,9 @@ const viewCache = new WeakMap<RenderedOperationSchema, OperationView>();
 
 export function operationView(op: RenderedOperationSchema): OperationView {
   const cached = viewCache.get(op);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const fieldSections: FieldSection[] = [];
   if (op.pathParams.length > 0) {
     fieldSections.push({ section: 'path', slug: 'path-parameters', title: 'Path parameters', nodes: op.pathParams });
@@ -132,7 +148,9 @@ export function operationView(op: RenderedOperationSchema): OperationView {
  * types (no underscore) pass through unchanged.
  */
 export function cleanTypeName(name: string | undefined): string {
-  if (typeof name !== 'string' || name.length === 0) return 'unknown';
+  if (typeof name !== 'string' || name.length === 0) {
+    return 'unknown';
+  }
   const i = name.indexOf('_');
   return i > 0 ? name.slice(i + 1) : name;
 }
@@ -152,11 +170,23 @@ export function nodeCount(nodes: RenderedSchemaNodeSchema[]): number {
   const stack: RenderedSchemaNodeSchema[] = [...nodes];
   while (stack.length > 0) {
     const n = stack.pop();
-    if (!n) break;
+    if (!n) {
+      break;
+    }
     count++;
-    if (n.children) for (const child of n.children) stack.push(child);
-    if (n.items) stack.push(n.items);
-    if (n.variants) for (const v of n.variants) stack.push(v);
+    if (n.children) {
+      for (const child of n.children) {
+        stack.push(child);
+      }
+    }
+    if (n.items) {
+      stack.push(n.items);
+    }
+    if (n.variants) {
+      for (const v of n.variants) {
+        stack.push(v);
+      }
+    }
   }
   return count;
 }

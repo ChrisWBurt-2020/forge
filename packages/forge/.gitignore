@@ -1,0 +1,13 @@
+# Tarballs that scripts/archive.mjs makes.
+/dist
+
+# Tarballs from npm pack.
+*.tgz
+
+# Dev dependencies, which build the plugin library.
+/node_modules
+
+# What scripts/build.mjs generates: the WIT's bindings, and the library.
+/src/wit
+/plugin/*.js
+/plugin/*.d.ts

@@ -1,2 +1,3 @@
 packages:
   - packages/*
+  - src/bin/forge/ts/lib

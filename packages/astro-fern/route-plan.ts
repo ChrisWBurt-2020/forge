@@ -200,7 +200,9 @@ function absolute(site: string | undefined, pathname: string): string {
 
 function operationLocations(catalog: FernContentCatalogSchema): Map<string, ContentOperationLocation> {
   const cached = catalogOperationLocations.get(catalog);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   const locations = new Map<string, ContentOperationLocation>();
   for (const product of catalog.products) {
@@ -284,7 +286,9 @@ function llmsLinks(
   const productBase = joinPath(base, productSlug);
   const prefix = snapshot.default ? productBase : joinPath(productBase, segment(snapshot.slug));
   const links: FernAgentLinksSchema['llms'] = [];
-  if (scopes.includes('site')) links.push({ scope: 'site', href: absolute(site, siteIndexPath) });
+  if (scopes.includes('site')) {
+    links.push({ scope: 'site', href: absolute(site, siteIndexPath) });
+  }
   if (scopes.includes('product') && productHasDefaultSnapshot) {
     links.push({ scope: 'product', href: absolute(site, `${productBase}/llms.txt`) });
   }

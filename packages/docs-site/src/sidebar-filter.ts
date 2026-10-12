@@ -22,7 +22,9 @@ export function computeSidebarFilter(entries: readonly SidebarFilterEntry[], raw
   const query = normalizeSidebarFilterText(rawQuery);
   const visible = Array.from({ length: entries.length }, () => query.length === 0);
   const expanded = Array.from({ length: entries.length }, () => false);
-  if (!query) return { visible, expanded };
+  if (!query) {
+    return { visible, expanded };
+  }
   const terms = query.split(' ');
 
   entries.forEach((entry, index) => {
@@ -30,7 +32,9 @@ export function computeSidebarFilter(entries: readonly SidebarFilterEntry[], raw
     let searchParentIndex = entry.parentIndex;
     while (searchParentIndex !== null) {
       const parent = entries[searchParentIndex];
-      if (!parent) break;
+      if (!parent) {
+        break;
+      }
       searchPath.unshift(parent.searchText);
       searchParentIndex = parent.parentIndex;
     }
@@ -43,22 +47,30 @@ export function computeSidebarFilter(entries: readonly SidebarFilterEntry[], raw
         term,
         isLastTerm ? Math.max(searchIndex, localLabelIndex) : searchIndex,
       );
-      if (termIndexInPath < 0) return false;
+      if (termIndexInPath < 0) {
+        return false;
+      }
       searchIndex = termIndexInPath + term.length;
       return true;
     });
-    if (!matches) return;
+    if (!matches) {
+      return;
+    }
 
     const endIndex = entry.isGroup ? entry.descendantEndIndex : index + 1;
     for (let matchIndex = index; matchIndex < endIndex; matchIndex++) {
       visible[matchIndex] = true;
     }
-    if (entry.isGroup) expanded[index] = true;
+    if (entry.isGroup) {
+      expanded[index] = true;
+    }
 
     let parentIndex = entry.parentIndex;
     while (parentIndex !== null) {
       const parent = entries[parentIndex];
-      if (!parent) break;
+      if (!parent) {
+        break;
+      }
       visible[parentIndex] = true;
       expanded[parentIndex] = true;
       parentIndex = parent.parentIndex;
@@ -74,16 +86,24 @@ export function computeSidebarScrollAdjustment(
   itemTop: number,
   itemBottom: number,
 ): number {
-  if (visibleBottom <= visibleTop || itemBottom <= itemTop) return 0;
-  if (itemTop >= visibleTop && itemBottom <= visibleBottom) return 0;
+  if (visibleBottom <= visibleTop || itemBottom <= itemTop) {
+    return 0;
+  }
+  if (itemTop >= visibleTop && itemBottom <= visibleBottom) {
+    return 0;
+  }
   return (itemTop + itemBottom - visibleTop - visibleBottom) / 2;
 }
 
 export function hasMatchingSidebarScrollState(rawState: string | null, expectedHash: string): boolean {
-  if (!rawState) return false;
+  if (!rawState) {
+    return false;
+  }
   try {
     const state: unknown = JSON.parse(rawState);
-    if (!state || typeof state !== 'object') return false;
+    if (!state || typeof state !== 'object') {
+      return false;
+    }
     const { hash, scroll } = state as { hash?: unknown; scroll?: unknown };
     return hash === expectedHash && typeof scroll === 'number' && Number.isFinite(scroll) && scroll >= 0;
   } catch {
@@ -99,15 +119,21 @@ interface IndexedSidebarFilterEntry extends SidebarFilterEntry {
 function indexSidebar(root: HTMLElement): IndexedSidebarFilterEntry[] {
   const entries: IndexedSidebarFilterEntry[] = [];
   const topLevel = root.querySelector<HTMLUListElement>('ul.top-level');
-  if (!topLevel) return entries;
+  if (!topLevel) {
+    return entries;
+  }
 
   function visit(list: HTMLUListElement, parentIndex: number | null): void {
     for (const child of list.children) {
-      if (!(child instanceof HTMLLIElement)) continue;
+      if (!(child instanceof HTMLLIElement)) {
+        continue;
+      }
 
       const anchor = child.querySelector<HTMLAnchorElement>(':scope > a');
       const details = child.querySelector<HTMLDetailsElement>(':scope > details');
-      if (!anchor && !details) continue;
+      if (!anchor && !details) {
+        continue;
+      }
 
       const label = details
         ? details.querySelector<HTMLElement>(':scope > summary .group-label')?.textContent
@@ -124,7 +150,9 @@ function indexSidebar(root: HTMLElement): IndexedSidebarFilterEntry[] {
       entries.push(entry);
 
       const sublist = details?.querySelector<HTMLUListElement>(':scope > ul');
-      if (sublist) visit(sublist, index);
+      if (sublist) {
+        visit(sublist, index);
+      }
       entry.descendantEndIndex = entries.length;
     }
   }
@@ -140,7 +168,9 @@ function isVisible(element: HTMLElement): boolean {
 
 function hasStoredSidebarScroll(root: HTMLElement): boolean {
   const stateRoot = root.querySelector<HTMLElement>('sl-sidebar-state-persist');
-  if (!stateRoot) return false;
+  if (!stateRoot) {
+    return false;
+  }
   try {
     return hasMatchingSidebarScrollState(sessionStorage.getItem(SIDEBAR_STATE_KEY), stateRoot.dataset.hash ?? '');
   } catch {
@@ -164,9 +194,13 @@ function registerSidebarFilter(): void {
     #mobileMenuWasOpen = false;
 
     connectedCallback(): void {
-      if (this.#connected) return;
+      if (this.#connected) {
+        return;
+      }
       const input = this.querySelector<HTMLInputElement>('[data-sidebar-filter-input]');
-      if (!input) return;
+      if (!input) {
+        return;
+      }
 
       this.#connected = true;
       this.#input = input;
@@ -188,7 +222,9 @@ function registerSidebarFilter(): void {
     }
 
     disconnectedCallback(): void {
-      if (!this.#connected) return;
+      if (!this.#connected) {
+        return;
+      }
       this.#input?.removeEventListener('input', this.#handleInput);
       this.#input?.removeEventListener('keydown', this.#handleInputKeydown);
       this.removeEventListener('click', this.#handleSidebarClick);
@@ -215,7 +251,9 @@ function registerSidebarFilter(): void {
     #handleInput = (): void => {
       window.clearTimeout(this.#filterTimer);
       window.cancelAnimationFrame(this.#animationFrame);
-      if (!this.#input) return;
+      if (!this.#input) {
+        return;
+      }
       const query = normalizeSidebarFilterText(this.#input.value);
       if (!query) {
         this.#resetFilter();
@@ -233,7 +271,9 @@ function registerSidebarFilter(): void {
     };
 
     #handleInputKeydown = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return;
+      if (event.key !== 'Escape') {
+        return;
+      }
       this.#clearFilter(this.#desktopMediaQuery?.matches !== false);
     };
 
@@ -246,7 +286,9 @@ function registerSidebarFilter(): void {
       if (target instanceof HTMLElement && (target.matches('input, textarea, select') || target.isContentEditable)) {
         return;
       }
-      if (!this.#input || !isVisible(this.#input)) return;
+      if (!this.#input || !isVisible(this.#input)) {
+        return;
+      }
 
       event.preventDefault();
       event.stopPropagation();
@@ -254,9 +296,13 @@ function registerSidebarFilter(): void {
     };
 
     #handleSidebarClick = (event: MouseEvent): void => {
-      if (!this.#filtering || !(event.target instanceof Element)) return;
+      if (!this.#filtering || !(event.target instanceof Element)) {
+        return;
+      }
       const details = event.target.closest('summary')?.parentElement;
-      if (details instanceof HTMLDetailsElement) this.#openedByFilter.delete(details);
+      if (details instanceof HTMLDetailsElement) {
+        this.#openedByFilter.delete(details);
+      }
     };
 
     #handleMobileMenuChange = (): void => {
@@ -279,11 +325,17 @@ function registerSidebarFilter(): void {
 
     #positionCurrentPage(ignoreStoredState = false): void {
       const isDesktop = this.#desktopMediaQuery?.matches === true;
-      if (!isDesktop && !document.body.hasAttribute('data-mobile-menu-expanded')) return;
-      if (isDesktop && !ignoreStoredState && hasStoredSidebarScroll(this)) return;
+      if (!isDesktop && !document.body.hasAttribute('data-mobile-menu-expanded')) {
+        return;
+      }
+      if (isDesktop && !ignoreStoredState && hasStoredSidebarScroll(this)) {
+        return;
+      }
       const active = this.querySelector<HTMLElement>("[aria-current='page']");
       const scroller = this.closest('#starlight__sidebar');
-      if (!active || !(scroller instanceof HTMLElement)) return;
+      if (!active || !(scroller instanceof HTMLElement)) {
+        return;
+      }
 
       let ancestor = active.closest('details');
       while (ancestor && this.contains(ancestor)) {
@@ -294,7 +346,9 @@ function registerSidebarFilter(): void {
       window.cancelAnimationFrame(this.#scrollFrame);
       this.#scrollFrame = window.requestAnimationFrame(() => {
         this.#scrollFrame = 0;
-        if (!isDesktop && !document.body.hasAttribute('data-mobile-menu-expanded')) return;
+        if (!isDesktop && !document.body.hasAttribute('data-mobile-menu-expanded')) {
+          return;
+        }
         const scrollerRect = scroller.getBoundingClientRect();
         const filterRect = this.#input?.parentElement?.getBoundingClientRect();
         const activeRect = active.getBoundingClientRect();
@@ -305,12 +359,16 @@ function registerSidebarFilter(): void {
           activeRect.top,
           activeRect.bottom,
         );
-        if (adjustment) scroller.scrollTop += adjustment;
+        if (adjustment) {
+          scroller.scrollTop += adjustment;
+        }
       });
     }
 
     #applyFilter(): void {
-      if (!this.#input) return;
+      if (!this.#input) {
+        return;
+      }
       const query = normalizeSidebarFilterText(this.#input.value);
       if (!query) {
         this.#resetFilter();
@@ -319,7 +377,9 @@ function registerSidebarFilter(): void {
 
       if (!this.#filtering) {
         const scroller = this.closest('#starlight__sidebar');
-        if (scroller instanceof HTMLElement) this.#scrollBeforeFilter = scroller.scrollTop;
+        if (scroller instanceof HTMLElement) {
+          this.#scrollBeforeFilter = scroller.scrollTop;
+        }
       }
       this.#filtering = true;
       const result = computeSidebarFilter(this.#entries, query);
@@ -331,7 +391,9 @@ function registerSidebarFilter(): void {
       });
       this.#entries.forEach((entry, index) => {
         const hidden = !result.visible[index];
-        if (entry.element.hidden !== hidden) entry.element.hidden = hidden;
+        if (entry.element.hidden !== hidden) {
+          entry.element.hidden = hidden;
+        }
 
         if (result.expanded[index] && entry.details && !entry.details.open) {
           this.#openedByFilter.add(entry.details);
@@ -341,9 +403,13 @@ function registerSidebarFilter(): void {
     }
 
     #clearFilter(blur = false): void {
-      if (this.#input) this.#input.value = '';
+      if (this.#input) {
+        this.#input.value = '';
+      }
       this.#resetFilter();
-      if (blur) this.#input?.blur();
+      if (blur) {
+        this.#input?.blur();
+      }
     }
 
     #resetFilter(): void {
@@ -352,15 +418,21 @@ function registerSidebarFilter(): void {
       this.#filterTimer = 0;
       this.#animationFrame = 0;
       this.#entries.forEach((entry) => {
-        if (entry.element.hidden) entry.element.hidden = false;
+        if (entry.element.hidden) {
+          entry.element.hidden = false;
+        }
       });
       this.#openedByFilter.forEach((details) => {
-        if (details.open) details.open = false;
+        if (details.open) {
+          details.open = false;
+        }
       });
       this.#openedByFilter.clear();
       if (this.#scrollBeforeFilter !== null) {
         const scroller = this.closest('#starlight__sidebar');
-        if (scroller instanceof HTMLElement) scroller.scrollTop = this.#scrollBeforeFilter;
+        if (scroller instanceof HTMLElement) {
+          scroller.scrollTop = this.#scrollBeforeFilter;
+        }
       }
       this.#scrollBeforeFilter = null;
       this.#filtering = false;
@@ -372,4 +444,6 @@ function registerSidebarFilter(): void {
   }
 }
 
-if (typeof window !== 'undefined') registerSidebarFilter();
+if (typeof window !== 'undefined') {
+  registerSidebarFilter();
+}

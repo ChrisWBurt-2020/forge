@@ -161,12 +161,24 @@ export interface TestProject {
 
 function renderNode(node: SchemaNode, render: (markdown: string) => RichTextSchema): RenderedSchemaNodeSchema {
   const out: RenderedSchemaNodeSchema = { type: node.type, required: node.required };
-  if (node.name !== undefined) out.name = node.name;
-  if (node.sdkName !== undefined) out.sdkName = node.sdkName;
-  if (node.title !== undefined) out.title = node.title;
-  if (node.format !== undefined) out.format = node.format;
-  if (node.description) out.description = render(node.description);
-  if (node.enumValues) out.enumValues = node.enumValues;
+  if (node.name !== undefined) {
+    out.name = node.name;
+  }
+  if (node.sdkName !== undefined) {
+    out.sdkName = node.sdkName;
+  }
+  if (node.title !== undefined) {
+    out.title = node.title;
+  }
+  if (node.format !== undefined) {
+    out.format = node.format;
+  }
+  if (node.description) {
+    out.description = render(node.description);
+  }
+  if (node.enumValues) {
+    out.enumValues = node.enumValues;
+  }
   if (node.enumValueMetadata) {
     out.enumValueMetadata = node.enumValueMetadata.map((metadata) => ({
       value: metadata.value,
@@ -174,12 +186,24 @@ function renderNode(node: SchemaNode, render: (markdown: string) => RichTextSche
       ...(metadata.deprecated ? { deprecated: true } : {}),
     }));
   }
-  if (node.default !== undefined) out.default = node.default;
-  if (node.deprecated) out.deprecated = true;
-  if (node.children) out.children = node.children.map((child) => renderNode(child, render));
-  if (node.items) out.items = renderNode(node.items, render);
-  if (node.variants) out.variants = node.variants.map((variant) => renderNode(variant, render));
-  if (node.apiFieldPath) out.apiFieldPath = node.apiFieldPath;
+  if (node.default !== undefined) {
+    out.default = node.default;
+  }
+  if (node.deprecated) {
+    out.deprecated = true;
+  }
+  if (node.children) {
+    out.children = node.children.map((child) => renderNode(child, render));
+  }
+  if (node.items) {
+    out.items = renderNode(node.items, render);
+  }
+  if (node.variants) {
+    out.variants = node.variants.map((variant) => renderNode(variant, render));
+  }
+  if (node.apiFieldPath) {
+    out.apiFieldPath = node.apiFieldPath;
+  }
   return out;
 }
 
@@ -199,11 +223,21 @@ function renderResponseExample(
   render: (markdown: string) => RichTextSchema,
 ): RenderedResponseExampleSchema {
   const out: RenderedResponseExampleSchema = {};
-  if (example.name !== undefined) out.name = example.name;
-  if (example.summary !== undefined) out.summary = example.summary;
-  if (example.description !== undefined) out.description = render(example.description);
-  if (example.value !== undefined) out.value = example.value;
-  if (example.externalValue !== undefined) out.externalValue = example.externalValue;
+  if (example.name !== undefined) {
+    out.name = example.name;
+  }
+  if (example.summary !== undefined) {
+    out.summary = example.summary;
+  }
+  if (example.description !== undefined) {
+    out.description = render(example.description);
+  }
+  if (example.value !== undefined) {
+    out.value = example.value;
+  }
+  if (example.externalValue !== undefined) {
+    out.externalValue = example.externalValue;
+  }
   return out;
 }
 
@@ -216,8 +250,12 @@ function renderResponseRepresentation(
     schema: representation.schema ? renderNode(representation.schema, render) : null,
     examples: representation.examples.map((example) => renderResponseExample(example, render)),
   };
-  if (representation.payloadKey !== undefined) out.payloadKey = representation.payloadKey;
-  if (representation.generatedExample !== undefined) out.generatedExample = representation.generatedExample;
+  if (representation.payloadKey !== undefined) {
+    out.payloadKey = representation.payloadKey;
+  }
+  if (representation.generatedExample !== undefined) {
+    out.generatedExample = representation.generatedExample;
+  }
   return out;
 }
 
@@ -253,8 +291,12 @@ function renderOperation(
     requestBody: operation.requestBody ? renderRequestBody(operation.requestBody, render) : null,
     responses: operation.responses.map((response) => renderResponse(response, render)),
   };
-  if (operation.availability) out.availability = operation.availability;
-  if (operation.requireConfirmation) out.requireConfirmation = operation.requireConfirmation;
+  if (operation.availability) {
+    out.availability = operation.availability;
+  }
+  if (operation.requireConfirmation) {
+    out.requireConfirmation = operation.requireConfirmation;
+  }
   return out;
 }
 
@@ -267,7 +309,9 @@ export function testProject(
   let data: FernProjectData | undefined;
   return {
     getData() {
-      if (data) return data;
+      if (data) {
+        return data;
+      }
       const content = defineFernProject(contentOptions).getData();
       const operations = content.operations.map((source) => ({
         snapshotId: source.snapshotId,

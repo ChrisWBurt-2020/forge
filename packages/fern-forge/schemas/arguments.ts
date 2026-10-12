@@ -49,7 +49,9 @@ const enumArgumentSchema = z
 export const argumentSchema = z
   .discriminatedUnion('type', [stringArgumentSchema, numberArgumentSchema, booleanArgumentSchema, enumArgumentSchema])
   .superRefine((argument, context) => {
-    if (argument.required === true) return;
+    if (argument.required === true) {
+      return;
+    }
     const defaultValue = argument.required.default;
     if (argument.type !== 'enum' && typeof defaultValue !== argument.type) {
       context.addIssue({

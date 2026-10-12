@@ -28,14 +28,18 @@ export type ResolvedApiPage =
 let routerPromise: Promise<ApiRouter> | undefined;
 
 export function getApiRouter(): Promise<ApiRouter> {
-  if (routerPromise) return routerPromise;
+  if (routerPromise) {
+    return routerPromise;
+  }
   const promise = getFernRoutePlan().then((plan) => {
     assertToolingRouteNamespace(plan.catalog.products, plan.routing.base, base);
     return new ApiRouter(plan, base);
   });
   routerPromise = promise;
   void promise.catch(() => {
-    if (routerPromise === promise) routerPromise = undefined;
+    if (routerPromise === promise) {
+      routerPromise = undefined;
+    }
   });
   return promise;
 }
@@ -54,7 +58,9 @@ async function operationLoadOptions(request: Request, locals: App.Locals): Promi
 
 export async function getApiPage(url: URL, request: Request, locals: App.Locals): Promise<ResolvedApiPage | undefined> {
   const selection: ApiPageSelection | undefined = (await getApiRouter()).resolvePage(url);
-  if (!selection || selection.kind !== 'operation') return selection;
+  if (!selection || selection.kind !== 'operation') {
+    return selection;
+  }
   return { ...selection, page: await getFernPage(selection.pageId, await operationLoadOptions(request, locals)) };
 }
 
@@ -66,7 +72,9 @@ export async function getApiOperation(
 ): Promise<(ApiOperationSelection & { page: FernPageSchema }) | undefined> {
   const router = await getApiRouter();
   const selection = router.resolveOperation(url, representation);
-  if (!selection) return undefined;
+  if (!selection) {
+    return undefined;
+  }
   return { ...selection, page: await getFernPage(selection.pageId, await operationLoadOptions(request, locals)) };
 }
 

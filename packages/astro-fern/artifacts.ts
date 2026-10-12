@@ -44,7 +44,9 @@ async function readOptional(path: string): Promise<Uint8Array | undefined> {
   try {
     metadata = await lstat(path);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return undefined;
+    }
     throw error;
   }
   if (!metadata.isFile() || metadata.isSymbolicLink()) {
@@ -60,13 +62,17 @@ async function ensureManagedDirectory(path: string): Promise<void> {
       throw new Error(`astro-fern: managed artifact directory "${path}" must be a regular directory`);
     }
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
     await mkdir(path, { recursive: true });
   }
 }
 
 function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.byteLength !== right.byteLength) return false;
+  if (left.byteLength !== right.byteLength) {
+    return false;
+  }
   return left.every((byte, index) => byte === right[index]);
 }
 
@@ -207,7 +213,9 @@ async function removeUnreferencedFiles(directory: string, retained: ReadonlySet<
   try {
     entries = await readdir(directory, { withFileTypes: true });
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return;
+    }
     throw error;
   }
   for (const entry of entries) {
@@ -225,8 +233,12 @@ export async function pruneFernOperationArtifacts(
   previousRevision: string | undefined,
 ): Promise<void> {
   validateFernArtifactDigest(revision);
-  if (previousRevision === revision) return;
-  if (previousRevision !== undefined) validateFernArtifactDigest(previousRevision);
+  if (previousRevision === revision) {
+    return;
+  }
+  if (previousRevision !== undefined) {
+    validateFernArtifactDigest(previousRevision);
+  }
   const root = artifactsRoot(publicDir);
   const operationsDirectory = join(root, OPERATIONS_DIRECTORY);
   const catalogsDirectory = join(root, CATALOGS_DIRECTORY);
@@ -239,7 +251,9 @@ export async function pruneFernOperationArtifacts(
     const historyIsUnknown = descriptors.some(
       (entry) => entry.isFile() && entry.name.endsWith('.json') && entry.name !== `${revision}.json`,
     );
-    if (historyIsUnknown) return;
+    if (historyIsUnknown) {
+      return;
+    }
   }
 
   const retainedRevisions = new Set([revision, ...(previousRevision ? [previousRevision] : [])]);
@@ -249,16 +263,22 @@ export async function pruneFernOperationArtifacts(
   for (const retainedRevision of retainedRevisions) {
     const path = join(catalogsDirectory, `${retainedRevision}.json`);
     const bytes = await readOptional(path);
-    if (!bytes) throw new Error(`astro-fern: retained artifact descriptor "${retainedRevision}" is missing`);
+    if (!bytes) {
+      throw new Error(`astro-fern: retained artifact descriptor "${retainedRevision}" is missing`);
+    }
     const descriptor = await parseDescriptor(bytes, retainedRevision);
     for (const { digest } of descriptorArtifacts(descriptor).values()) {
       retainedOperations.add(digest);
-      if (retainedRevision === revision) currentOperations.add(digest);
+      if (retainedRevision === revision) {
+        currentOperations.add(digest);
+      }
     }
   }
 
   for (const digest of retainedOperations) {
-    if (currentOperations.has(digest)) continue;
+    if (currentOperations.has(digest)) {
+      continue;
+    }
     const bytes = await readOptional(join(operationsDirectory, `${digest}.json`));
     if (!bytes || (await fernArtifactDigest(bytes)) !== digest) {
       throw new Error(`astro-fern: prior operation artifact "${digest}" is missing or corrupt`);
@@ -270,7 +290,9 @@ export async function pruneFernOperationArtifacts(
 
   const rootEntries = await readdir(root, { withFileTypes: true });
   for (const entry of rootEntries) {
-    if (entry.name === OPERATIONS_DIRECTORY || entry.name === CATALOGS_DIRECTORY) continue;
+    if (entry.name === OPERATIONS_DIRECTORY || entry.name === CATALOGS_DIRECTORY) {
+      continue;
+    }
     await rm(join(root, entry.name), { recursive: true, force: true });
   }
 }

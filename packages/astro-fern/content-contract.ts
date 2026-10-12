@@ -16,7 +16,9 @@ const ENCODER = new TextEncoder();
 /** Serializes generated data once; the returned bytes are both hashed and published. */
 export function serializeFernArtifact(value: unknown): Uint8Array<ArrayBuffer> {
   const json = JSON.stringify(value);
-  if (json === undefined) throw new Error('astro-fern: artifact data is not JSON-serializable');
+  if (json === undefined) {
+    throw new Error('astro-fern: artifact data is not JSON-serializable');
+  }
   return ENCODER.encode(json);
 }
 

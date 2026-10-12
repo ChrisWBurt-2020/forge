@@ -1,0 +1,21 @@
+{
+  // Compiles src/index.ts and src/ts.ts, the libraries plugins are written
+  // with, into .js and .d.ts files in plugin/. scripts/build.mjs runs it, after
+  // generating the bindings of plugin/forge.wit into src/wit.
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "target": "es2022",
+    "lib": ["es2022"],
+    "types": [],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "declaration": true,
+    "rootDir": "src",
+    "outDir": "plugin",
+    "newLine": "lf"
+  },
+  "include": ["src/index.ts", "src/ts.ts", "src/wit/**/*.d.ts"]
+}

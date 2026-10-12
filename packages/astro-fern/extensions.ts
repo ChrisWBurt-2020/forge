@@ -139,9 +139,13 @@ export function getOperationExtensionData<TData>(
   name: string,
   schema?: ZodType<TData>,
 ): TData | JsonValueSchema | undefined {
-  if (!Object.hasOwn(operation.extensions, name)) return undefined;
+  if (!Object.hasOwn(operation.extensions, name)) {
+    return undefined;
+  }
   const value = operation.extensions[name];
-  if (value === undefined || schema === undefined) return value;
+  if (value === undefined || schema === undefined) {
+    return value;
+  }
   return schema.parse(value);
 }
 

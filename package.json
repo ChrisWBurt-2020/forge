@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
     "lint": "oxlint .",
-    "check": "pnpm format && pnpm lint",
+    "check": "pnpm format:check && pnpm lint",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "test:e2e": "pnpm --filter astro-fern test:e2e",
@@ -14,8 +15,8 @@
   },
   "devDependencies": {
     "@types/node": "26.0.1",
-    "oxfmt": "0.57.0",
-    "oxlint": "1.72.0"
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0"
   },
   "engines": {
     "node": ">=22.0.0"

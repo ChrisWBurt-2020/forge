@@ -36,11 +36,21 @@ const fernSdkCodeSampleSourceNameSchema = z.enum([
 /** Normalizes common Fern SDK aliases to the canonical code-sample target names. */
 export const fernSdkCodeSampleNameParserSchema = z.preprocess(
   (value) => {
-    if (value === 'js' || value === 'node') return 'javascript';
-    if (value === 'ts' || value === 'nodets') return 'typescript';
-    if (value === 'golang') return 'go';
-    if (value === 'dotnet' || value === 'c#') return 'csharp';
-    if (value === 'jvm') return 'java';
+    if (value === 'js' || value === 'node') {
+      return 'javascript';
+    }
+    if (value === 'ts' || value === 'nodets') {
+      return 'typescript';
+    }
+    if (value === 'golang') {
+      return 'go';
+    }
+    if (value === 'dotnet' || value === 'c#') {
+      return 'csharp';
+    }
+    if (value === 'jvm') {
+      return 'java';
+    }
     return value;
   },
   z.enum(['curl', 'python', 'javascript', 'typescript', 'go', 'ruby', 'csharp', 'java']),

@@ -459,7 +459,9 @@ const contentCatalogBaseSchema = z.object({
 
 /** Compact, route-neutral global registry plus sparse product snapshot trees. */
 export const contentCatalogSchema = contentCatalogBaseSchema.superRefine((catalog, context) => {
-  for (const issue of catalogSnapshotIssues(catalog)) context.addIssue({ code: 'custom', ...issue });
+  for (const issue of catalogSnapshotIssues(catalog)) {
+    context.addIssue({ code: 'custom', ...issue });
+  }
 });
 /** Compact project catalog used to plan routes without loading operation artifacts. */
 export type FernContentCatalogSchema = z.infer<typeof contentCatalogSchema>;
@@ -468,7 +470,9 @@ export type FernContentCatalogSchema = z.infer<typeof contentCatalogSchema>;
 export const contentArtifactCatalogSchema = contentCatalogBaseSchema
   .extend({ products: z.array(contentArtifactCatalogProductSchema) })
   .superRefine((catalog, context) => {
-    for (const issue of catalogSnapshotIssues(catalog)) context.addIssue({ code: 'custom', ...issue });
+    for (const issue of catalogSnapshotIssues(catalog)) {
+      context.addIssue({ code: 'custom', ...issue });
+    }
   });
 export type FernContentArtifactCatalogSchema = z.infer<typeof contentArtifactCatalogSchema>;
 

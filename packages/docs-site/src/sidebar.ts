@@ -36,21 +36,29 @@ function productSidebar(router: ApiRouter, snapshotId: string, lang?: string): P
   }
   const cacheKey = JSON.stringify([snapshotId, lang]);
   const cached = routerCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   const sidebar = router.plan.catalog.products.flatMap((product) => {
     const snapshot = product.snapshots.find((candidate) => candidate.id === snapshotId);
-    if (!snapshot) return [];
+    if (!snapshot) {
+      return [];
+    }
     const sections = new Map<string, { id: string; title: string; items: ForgeSidebarItem[] }>();
     for (const page of snapshot.pages) {
-      if (page.placement) continue;
+      if (page.placement) {
+        continue;
+      }
       let section = sections.get(page.section.id);
       if (!section) {
         section = { id: page.section.id, title: page.section.title, items: [] };
         sections.set(page.section.id, section);
       }
       const item = operationSidebarItem(router, product.id, snapshot.id, page, lang);
-      if (item) section.items.push(item);
+      if (item) {
+        section.items.push(item);
+      }
     }
     const productLink =
       router.productHref(product.id, snapshot.id, lang) ?? router.productHref(product.id, snapshot.id);
@@ -63,7 +71,9 @@ function productSidebar(router: ApiRouter, snapshotId: string, lang?: string): P
     });
     const resourceRoots = resourceSidebar(router, product.id, snapshot, lang);
     const directOperations = snapshot.pages.flatMap((page): ForgeSidebarItem[] => {
-      if (!page.placement || page.placement.resourcePath.length > 0) return [];
+      if (!page.placement || page.placement.resourcePath.length > 0) {
+        return [];
+      }
       const item = operationSidebarItem(router, product.id, snapshot.id, page, lang);
       return item ? [item] : [];
     });
@@ -101,7 +111,9 @@ function resourceSidebar(
   for (const page of snapshot.pages) {
     const placement = page.placement;
     const first = placement?.resourcePath[0];
-    if (!placement || !first) continue;
+    if (!placement || !first) {
+      continue;
+    }
     let resource = roots.get(first.id);
     if (!resource) {
       resource = { ...first, key: '', path: [first], resources: [], operations: [] };
@@ -190,7 +202,9 @@ export function forgeRouteSidebar(
     { label: 'Developer Tooling', collapsed: true, items: commands.globalItems },
     ...products.map(({ product, item }) => {
       const productCommands = commands.productItems.get(product.id);
-      if (!productCommands || !('items' in item)) return item;
+      if (!productCommands || !('items' in item)) {
+        return item;
+      }
 
       const overviewIndex = item.items.findIndex((entry) => 'link' in entry && entry.label === 'Overview');
       const insertIndex = overviewIndex + 1;
@@ -232,7 +246,9 @@ function commandSidebar(
         node = { name, children: new Map() };
         siblings.set(name, node);
       }
-      if (index === command.fullPath.length - 1) node.command = command;
+      if (index === command.fullPath.length - 1) {
+        node.command = command;
+      }
       siblings = node.children;
     });
   }
