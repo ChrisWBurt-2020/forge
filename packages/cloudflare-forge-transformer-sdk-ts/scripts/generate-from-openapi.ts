@@ -8,7 +8,10 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
+  renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -45,6 +48,8 @@ interface Args {
   openapi?: string;
   base?: string;
   out?: string;
+  organization?: string;
+  clientName?: string;
   help: boolean;
 }
 
@@ -62,6 +67,13 @@ Usage:
 Options:
   --base <file.json>       Complete OpenAPI matching the pre-generated SDK
   --out <dir>              Required output directory
+  --organization <name>    Fern organization for the generated SDK
+                           (default: cloudflare). Fern derives the root client
+                           name from the organization: <Organization>ApiClient.
+  --client-name <Name>     Exact root client class name for the generated SDK
+                           (e.g. HeronRouterClient), overriding the
+                           organization-derived name. Generation-only; ignored
+                           when copying the pre-generated SDK with --base.
   -h, --help               Show this help
 `;
 }
@@ -72,10 +84,18 @@ function parseArgs(argv: string[]): Args {
     const arg = argv[i];
     if (arg === undefined || arg === '--') continue;
     const next = argv[i + 1];
-    if (arg === '--base' || arg === '--out' || arg === '--bundle') {
+    if (
+      arg === '--base' ||
+      arg === '--out' ||
+      arg === '--bundle' ||
+      arg === '--organization' ||
+      arg === '--client-name'
+    ) {
       if (next === undefined) throw new Error(`Missing value for ${arg}`);
       if (arg === '--base') args.base = next;
       else if (arg === '--out') args.out = next;
+      else if (arg === '--organization') args.organization = next;
+      else if (arg === '--client-name') args.clientName = next;
       else args.openapi = next;
       i += 1;
     } else if (arg === '-h' || arg === '--help') {
@@ -132,10 +152,10 @@ function run(command: string, args: string[], cwd: string, env?: NodeJS.ProcessE
   execFileSync(command, args, { cwd, env: { ...process.env, ...env }, stdio: 'inherit' });
 }
 
-function writeFernWorkspace(root: string, generated: string, fernSpec: string): void {
+function writeFernWorkspace(root: string, generated: string, fernSpec: string, organization: string): void {
   const apiDir = join(root, 'fern/apis/api');
   mkdirSync(apiDir, { recursive: true });
-  writeJson(join(root, 'fern/fern.config.json'), { organization: 'cloudflare', version: '5.112.0' });
+  writeJson(join(root, 'fern/fern.config.json'), { organization, version: '5.112.0' });
   writeFileSync(
     join(apiDir, 'generators.yml'),
     `api:\n  specs:\n    - openapi: ../../../openapi.json\n      settings:\n        only-include-referenced-schemas: false\n        object-query-parameters: true\n        respect-nullable-schemas: true\n        coerce-enums-to-literals: true\n        path-parameter-order: url-order\n        resolve-schema-collisions: true\ndefault-group: typescript-sdk\ngroups:\n  typescript-sdk:\n    generators:\n      - name: fernapi/fern-typescript-sdk\n        version: ${TYPESCRIPT_GENERATOR_VERSION}\n        local-command:\n          - ${JSON.stringify(process.execPath)}\n          - --max-old-space-size=${TYPESCRIPT_GENERATOR_HEAP_MB}\n          - ${JSON.stringify(TYPESCRIPT_GENERATOR)}\n        output:\n          location: local-file-system\n          path: ${JSON.stringify(generated)}\n        config:\n          allowCustomFetcher: true\n          formatter: oxfmt\n          linter: oxlint\n          skipResponseValidation: true\n          fetchSupport: native\n          formDataSupport: Node18\n          fileResponseType: binary-response\n          streamType: web\n          omitUndefined: true\n          offsetSemantics: page-index\n          maxRetries: 2\n          retryStatusCodes: recommended\n`,
@@ -177,6 +197,50 @@ function installCustomRuntime(generated: string): void {
   cpSync(join(GENERATOR_ROOT, 'custom'), generated, { recursive: true });
 }
 
+// Fern derives the root client name from the organization and the fixed
+// OpenAPI api name ("api"): <Organization>ApiClient, with matching
+// <Organization>ApiError / <Organization>ApiTimeoutError classes. There is no
+// generator option for an exact name, so --client-name is applied as a
+// rename over the generated tree: the derived base is discovered from the
+// generated Client.ts (never assumed), every occurrence in text files is
+// replaced, and files named after the base are renamed to match.
+const RENAMABLE_EXTENSIONS = new Set(['.ts', '.js', '.json', '.md', '.yml', '.yaml', '.txt']);
+
+function* walkFiles(dir: string): Generator<string> {
+  for (const entry of readdirSync(dir)) {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) yield* walkFiles(path);
+    else yield path;
+  }
+}
+
+function renameGeneratedClient(generated: string, clientName: string): number {
+  const targetBase = clientName.replace(/Client$/, '');
+  if (targetBase.length === 0) throw new Error(`--client-name "${clientName}" leaves no base name`);
+  const clientSource = readFileSync(join(generated, 'Client.ts'), 'utf8');
+  const derived = /export class (\w+)Client/.exec(clientSource);
+  if (!derived?.[1]) throw new Error('could not find the generated root client class in Client.ts');
+  const sourceBase = derived[1];
+  if (sourceBase === targetBase) return 0;
+  let replacements = 0;
+  const renames: Array<[string, string]> = [];
+  for (const path of walkFiles(generated)) {
+    if (RENAMABLE_EXTENSIONS.has(path.slice(path.lastIndexOf('.')))) {
+      const content = readFileSync(path, 'utf8');
+      if (content.includes(sourceBase)) {
+        writeFileSync(path, content.split(sourceBase).join(targetBase));
+        replacements += 1;
+      }
+    }
+    const base = path.slice(path.lastIndexOf('/') + 1);
+    if (base.includes(sourceBase)) {
+      renames.push([path, join(dirname(path), base.split(sourceBase).join(targetBase))]);
+    }
+  }
+  for (const [from, to] of renames) renameSync(from, to);
+  return replacements;
+}
+
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -184,6 +248,12 @@ function main(): void {
     return;
   }
   if (!args.out) throw new Error('--out is required');
+  if (args.organization !== undefined && !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(args.organization)) {
+    throw new Error(`--organization "${args.organization}" must be alphanumeric, '-' or '_'`);
+  }
+  if (args.clientName !== undefined && !/^[A-Z][A-Za-z0-9]*$/.test(args.clientName)) {
+    throw new Error(`--client-name "${args.clientName}" must be a PascalCase identifier (e.g. HeronRouterClient)`);
+  }
 
   const out = resolve(args.out);
   if (args.openapi === undefined) {
@@ -221,7 +291,7 @@ function main(): void {
         `forge-transformer-sdk-ts: applied ${fernCompatibilityFixCount} Fern OpenAPI compatibility repair(s)\n`,
       );
     }
-    writeFernWorkspace(work, generated, fernSpec);
+    writeFernWorkspace(work, generated, fernSpec, args.organization ?? 'cloudflare');
     const binDir = join(work, 'bin');
     writeCheckFixToolShims(binDir);
     run(
@@ -249,6 +319,13 @@ function main(): void {
       FORGE_SDK_SOURCE_SPEC: sourceSpec,
       FORGE_SDK_FERN_SPEC: fernSpec,
     });
+
+    if (args.clientName !== undefined) {
+      const renamedFiles = renameGeneratedClient(generated, args.clientName);
+      process.stderr.write(
+        `forge-transformer-sdk-ts: renamed generated client to ${args.clientName} (${renamedFiles} file(s) updated)\n`,
+      );
+    }
 
     rmSync(out, { recursive: true, force: true });
     mkdirSync(out, { recursive: true });
